@@ -43,21 +43,6 @@ Two steps. One include, one control.
 `xmlns:dock="https://github.com/docklonia"`. No code-behind, no bootstrapper, no
 service registration.
 
-A group named on a descriptor is the region its items open into. `IsPersistent`
-says the region outlives its contents: closing everything in it leaves the pane
-where the user put it, and the next item opens back into it. Closing the pane
-itself still closes it — and closes each of its contents through that item's own
-`CloseCommand`, exactly as closing its tabs one at a time would.
-
-**Why the one include cannot be avoided.** Avalonia has no equivalent of WPF's
-`Themes/Generic.xaml` auto-discovery, so a library's default `ControlTheme`s are
-never located automatically. Merging into `Application.Current.Resources` from a
-static constructor would mutate global state as a side effect of constructing a
-control; merging into each control's own `Resources` would shadow the
-application's overrides, since Avalonia resolves resources from the control
-outward — defeating the styling contract. One `StyleInclude` keeps resolution
-order correct.
-
 ## Zero consumer entanglement
 
 Content view models are POCOs. No interface to implement, no base class, no
