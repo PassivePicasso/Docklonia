@@ -254,4 +254,69 @@ public class MutationTests
 
         Assert.Null(layout.MaximizedPane);
     }
+
+    /// <summary>
+    /// A persistent pane is a region the user arranged, so closing everything
+    /// in it leaves the region (§6.1).
+    /// </summary>
+    [Fact]
+    public void EmptyingAPersistentTabPaneLeavesItWhereItWas()
+    {
+        var keep = Leaf("a");
+        var only = Leaf("b");
+        var tabs = new DockTabPane(only) { Group = "Documents", IsPersistent = true };
+        var layout = LayoutWith(new DockSplitPane(Orientation.Vertical, keep, tabs));
+
+        DockMutator.Remove(layout, only);
+
+        var split = Assert.IsType<DockSplitPane>(layout.Root);
+        Assert.Same(tabs, split.Second);
+        Assert.Empty(tabs.Children);
+    }
+
+    /// <summary>Persistence survives being emptied, so the next member joins the same pane.</summary>
+    [Fact]
+    public void AnEmptiedPersistentPaneStillAcceptsTheNextMember()
+    {
+        var only = Leaf("b");
+        var tabs = new DockTabPane(only) { Group = "Documents", IsPersistent = true };
+        var layout = LayoutWith(new DockSplitPane(Orientation.Vertical, Leaf("a"), tabs));
+
+        DockMutator.Remove(layout, only);
+
+        var opened = Leaf("c");
+        DockPlacement.Place(layout, new DockActivation(), opened, "Documents", Array.Empty<Descriptors.DockGroup>());
+
+        Assert.Same(tabs, opened.Parent);
+    }
+
+    /// <summary>Removing the pane itself is not the same act as emptying it.</summary>
+    [Fact]
+    public void RemovingAPersistentPaneOutrightStillCollapsesTheSplit()
+    {
+        var keep = Leaf("a");
+        var tabs = new DockTabPane(Leaf("b")) { Group = "Documents", IsPersistent = true };
+        var layout = LayoutWith(new DockSplitPane(Orientation.Vertical, keep, tabs));
+
+        DockMutator.Remove(layout, tabs);
+
+        Assert.Same(keep, layout.Root);
+    }
+
+    /// <summary>
+    /// Merging a persistent pane into another carries the flag with the tabs,
+    /// as the group name already travels: the region is where its tabs went.
+    /// </summary>
+    [Fact]
+    public void MergingAPersistentPaneCarriesPersistenceToWhereItsTabsLanded()
+    {
+        var target = new DockTabPane(Leaf("a"));
+        var moving = new DockTabPane(Leaf("b")) { Group = "Documents", IsPersistent = true };
+        var layout = LayoutWith(new DockSplitPane(Orientation.Horizontal, target, moving));
+
+        DockMutator.Dock(layout, moving, target, DockDirection.Center);
+
+        Assert.True(target.IsPersistent);
+        Assert.Equal("Documents", target.Group);
+    }
 }

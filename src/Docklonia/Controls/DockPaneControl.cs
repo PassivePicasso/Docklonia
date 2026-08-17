@@ -88,7 +88,12 @@ public class DockPaneControl : TemplatedControl
     internal DockTabPane? TabPane => Node as DockTabPane;
 
     /// <summary>The node currently displayed — the tab pane's selection, or the leaf itself.</summary>
-    internal IDockNode? SelectedNode => TabPane?.SelectedChild ?? Node;
+    /// <remarks>
+    /// A tab pane answers its selection and nothing else, including when it has
+    /// none: falling back to the pane would make an emptied persistent pane its
+    /// own content, and presenting a pane inside itself does not terminate.
+    /// </remarks>
+    internal IDockNode? SelectedNode => TabPane is { } tabs ? tabs.SelectedChild : Node;
 
     protected override Avalonia.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
         => new DockPaneAutomationPeer(this);

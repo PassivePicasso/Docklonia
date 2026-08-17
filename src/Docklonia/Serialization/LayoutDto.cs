@@ -59,6 +59,9 @@ internal sealed class TabsNodeDto : NodeDto
     /// <summary>Durable group identity, so later members join the pane wherever it now sits (§3.9).</summary>
     public string? Group { get; set; }
 
+    /// <summary>Whether the pane survives being emptied (§6.1). Absent in older documents, where it was never true.</summary>
+    public bool IsPersistent { get; set; }
+
     public string? SelectedId { get; set; }
 
     public List<NodeDto> Children { get; set; } = new();

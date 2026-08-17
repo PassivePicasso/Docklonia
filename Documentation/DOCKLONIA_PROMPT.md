@@ -448,6 +448,9 @@ unable to place genuinely-new content without disturbing everything else.
 <dock:Dock.Groups>
   <dock:DockGroup Name="Tools"  Seed="Right"  SeedSize="0.25" />
   <dock:DockGroup Name="Output" Seed="Bottom" SeedSize="0.3" />
+
+  <!-- A region that outlives its contents (§6.1). -->
+  <dock:DockGroup Name="Documents" Seed="Center" IsPersistent="True" />
 </dock:Dock.Groups>
 
 <!-- Items: reference a group by name, or omit for Active. -->
@@ -479,6 +482,9 @@ discouraged.
 `Group` is a **durable identity**, carried by the `DockTabPane` and persisted
 with it. Once the user drags a group's pane elsewhere, later members join it
 at its new location — the seed is never reconsulted.
+
+`IsPersistent` is carried the same way and answers what happens when the
+group's pane is emptied rather than moved: see §6.1.
 
 #### Seeding is a docking operation, not a separate mechanism
 
@@ -582,6 +588,24 @@ intact.
 `CloseCommand` and `ClosedCommand` are distinct and may both be present:
 `CloseCommand` intercepts *before* anything happens, `ClosedCommand` notifies
 *after* the last view of an item is gone.
+
+#### Closing a pane is closing its contents
+
+Closing a **pane** — its close button, its menu entry, the keyboard — is
+defined as each of its contents closing, one at a time, through everything
+above: `CanClose`, then `CloseCommand`, then removal. Closing a pane and
+closing its tabs one by one are therefore the same act with the same result.
+
+Taking the subtree out wholesale is not an alternative implementation of it.
+That leaves every item still in the bound collection with no node, and an
+item in that state is one the application believes is open and the user cannot
+reach: opening it again finds it already open, so nothing new is created, and
+it has no view to bring forward. Nothing recovers it short of the consumer
+noticing on its own.
+
+A content that declines survives, and so does the pane holding it. A pane left
+with nothing is removed — including a persistent one (§6.1), because this
+close was asked for explicitly.
 
 ### 3.11 Activation and selection
 
@@ -978,6 +1002,28 @@ Also specify:
   dropped from its owner's collection (§5.2); empty ancestors are pruned
   recursively.
 
+#### Persistent panes
+
+A group may declare `IsPersistent`, which its pane carries and persists (§8)
+the way `Group` itself does. Such a pane is **not** removed when its last
+child leaves: it stays where the user put it, empty, and later members of the
+group return to it.
+
+This exists because normalization answers the wrong question for a region the
+user arranged. Collapsing an emptied pane is right when the pane was only ever
+a container for what happened to be in it. It is wrong for a document area:
+closing every document there is not a request to give up the layout, and
+re-opening one would otherwise re-seed a pane somewhere the user did not
+choose.
+
+Persistence is about *emptying*, not permanence. Removing the pane itself —
+an explicit close (§3.10), a drag, a float — behaves exactly as it does for
+any other pane. A persistent pane merged into another carries the flag with
+its tabs, as `Group` already does: the region is where its tabs went.
+
+A pane with no selection presents no content. That is what an empty persistent
+pane is, and a pane must never fall back to presenting itself.
+
 ---
 
 ## 7. Cross-window and cross-`Dock` drag
@@ -1098,9 +1144,12 @@ zero-setup path (§1) and nothing in the library requires it.
   every `FloatPane` (§5.2), and every auto-hidden entry (§5.3) serialize into
   the same layout.
 - The full layout tree round-trips: node types, hierarchy, split ratios, tab
-  order, per-tab-pane selection and the active pane (§3.11), group names
-  (§3.9), floating geometry and window state, maximized pane, and auto-hide
-  entries **with their restore anchors**.
+  order, per-tab-pane selection and the active pane (§3.11), group names and
+  persistence (§3.9, §6.1), floating geometry and window state, maximized
+  pane, and auto-hide entries **with their restore anchors**.
+- An **empty persistent pane** round-trips as itself. It holds no content key
+  to be found by, so the flag on the pane is the only thing that says the
+  region should still be there after a restart.
 - Content identity is serialized as a **stable string key**, never as a
   serialized view or view model. The key comes from the resolved descriptor's
   `ContentKey` binding (§3.7), so the consumer's own identifier is used as-is

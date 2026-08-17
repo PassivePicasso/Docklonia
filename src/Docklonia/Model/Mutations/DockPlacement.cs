@@ -52,7 +52,13 @@ internal static class DockPlacement
         }
 
         var definition = groups.FirstOrDefault(candidate => candidate.Name == group);
-        var pane = new DockTabPane { Group = group };
+
+        var pane = new DockTabPane
+        {
+            Group = group,
+            IsPersistent = definition?.IsPersistent ?? false,
+        };
+
         pane.Add(node);
 
         DockMutator.DockToRoot(layout, pane, definition?.Seed ?? DockDirection.Right, definition?.SeedSize ?? 0.25);

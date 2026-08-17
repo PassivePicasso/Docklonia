@@ -130,4 +130,36 @@ public class SerializationTests
     {
         Assert.Throws<LayoutFormatException>(() => DockLayout.FromJson("{ not json"));
     }
+
+    /// <summary>
+    /// An empty persistent pane is the whole point of the flag: a region with
+    /// nothing in it has no content key to be found by, so only the flag says
+    /// it should still be there after a restart.
+    /// </summary>
+    [Fact]
+    public void AnEmptyPersistentPaneSurvivesARoundTrip()
+    {
+        var documents = new DockTabPane { Group = "Documents", IsPersistent = true };
+        var layout = new DockLayout { Root = new DockSplitPane(Orientation.Horizontal, documents, new DockTabPane(Leaf("inspector"))) };
+
+        var restored = DockLayout.FromJson(layout.ToJson());
+
+        var pane = Assert.IsType<DockTabPane>(Assert.IsType<DockSplitPane>(restored.Root).First);
+
+        Assert.Empty(pane.Children);
+        Assert.True(pane.IsPersistent);
+        Assert.Equal("Documents", pane.Group);
+    }
+
+    /// <summary>A document written before the flag existed reads as it always did.</summary>
+    [Fact]
+    public void ADocumentWithoutTheFlagRestoresAnOrdinaryPane()
+    {
+        var json = new DockLayout { Root = new DockTabPane(Leaf("a")) }.ToJson()
+            .Replace("\"isPersistent\":false,", string.Empty);
+
+        var restored = DockLayout.FromJson(json);
+
+        Assert.False(Assert.IsType<DockTabPane>(restored.Root).IsPersistent);
+    }
 }

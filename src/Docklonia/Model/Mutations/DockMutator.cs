@@ -233,6 +233,7 @@ public static class DockMutator
             }
 
             tabs.Group ??= incoming.Group;
+            tabs.IsPersistent |= incoming.IsPersistent;
             tabs.SelectedChild = tabs.Children.Count > 0 ? tabs.Children[Math.Min(index - 1, tabs.Children.Count - 1)] : null;
             return;
         }

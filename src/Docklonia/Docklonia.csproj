@@ -9,7 +9,7 @@
 
   <PropertyGroup>
     <PackageId>Docklonia</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <PackageOutputPath>F:\Projects\Godot\NuGetFeed</PackageOutputPath>
     <Description>A docking-layout library for Avalonia: split panes, tabbed groups, floating windows, drag-and-drop re-docking, and a JSON-serializable layout.</Description>
     <Authors>James LaPenn</Authors>

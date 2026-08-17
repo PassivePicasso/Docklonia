@@ -34,4 +34,16 @@ public sealed class DockGroup
 
     /// <summary>Proportion of the root given to the group's pane when it is seeded.</summary>
     public double SeedSize { get; set; } = 0.25;
+
+    /// <summary>
+    /// Whether the group's pane stays in the tree once its last child leaves,
+    /// so a region the user arranged survives closing everything in it and is
+    /// removed only by closing the pane itself.
+    /// </summary>
+    /// <remarks>
+    /// The flag is copied onto the pane when it is seeded and persisted with
+    /// it, exactly as <see cref="Name"/> is: the pane, not this declaration, is
+    /// what a later close consults.
+    /// </remarks>
+    public bool IsPersistent { get; set; }
 }

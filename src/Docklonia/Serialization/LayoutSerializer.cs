@@ -148,6 +148,7 @@ internal static class LayoutSerializer
         {
             Id = tabs.Id,
             Group = tabs.Group,
+            IsPersistent = tabs.IsPersistent,
             SelectedId = tabs.SelectedChild?.Id,
             Children = tabs.Children.Select(WriteNode).OfType<NodeDto>().ToList(),
         },
@@ -187,7 +188,12 @@ internal static class LayoutSerializer
 
             case TabsNodeDto tabsDto:
             {
-                var tabs = new DockTabPane { Id = tabsDto.Id, Group = tabsDto.Group };
+                var tabs = new DockTabPane
+                {
+                    Id = tabsDto.Id,
+                    Group = tabsDto.Group,
+                    IsPersistent = tabsDto.IsPersistent,
+                };
 
                 foreach (var child in tabsDto.Children.Select(ReadNode).OfType<IDockNode>())
                 {

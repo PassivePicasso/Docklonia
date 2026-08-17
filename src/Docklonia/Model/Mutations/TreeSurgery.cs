@@ -89,7 +89,10 @@ internal static class TreeSurgery
             {
                 tabs.Remove(node);
 
-                if (tabs.Children.Count == 0)
+                // A persistent pane is a region the user arranged, not a
+                // container for whatever happened to be in it, so emptying it
+                // is not a reason to take it away.
+                if (tabs.Children.Count == 0 && !tabs.IsPersistent)
                 {
                     Detach(layout, tabs);
                 }

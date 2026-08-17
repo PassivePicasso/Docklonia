@@ -26,27 +26,53 @@ internal sealed class DockCommands
     /// closing and does nothing further; the consumer then closes by removing the
     /// item from the bound collection, or declines (§3.10).
     /// </summary>
+    /// <remarks>
+    /// A composite closes as each of its contents closing, one at a time, so
+    /// closing a pane and closing its tabs one by one are the same act. Taking
+    /// the subtree out wholesale would remove the views while leaving every
+    /// item in the consumer's collection, which is an item nothing can reopen:
+    /// it is still there, so opening it finds it, and it has no view.
+    /// </remarks>
     internal void RequestClose(IDockNode node)
     {
         if (node is DockContent content)
         {
-            if (!content.CanClose)
-            {
-                return;
-            }
-
-            if (_dock.Coordinator.MetadataFor(content)?.CloseCommand is { } veto)
-            {
-                if (veto.CanExecute(content.Content))
-                {
-                    veto.Execute(content.Content);
-                }
-
-                return;
-            }
+            RequestCloseContent(content);
+            return;
         }
 
-        Close(node);
+        foreach (var descendant in DockTree.ContentsIn(node).ToArray())
+        {
+            RequestCloseContent(descendant);
+        }
+
+        // What is left declined. An emptied pane is gone already unless it is
+        // persistent, and that one goes now: this close was asked for.
+        if (!DockTree.ContentsIn(node).Any())
+        {
+            Close(node);
+        }
+    }
+
+    /// <inheritdoc cref="RequestClose"/>
+    private void RequestCloseContent(DockContent content)
+    {
+        if (!content.CanClose)
+        {
+            return;
+        }
+
+        if (_dock.Coordinator.MetadataFor(content)?.CloseCommand is { } veto)
+        {
+            if (veto.CanExecute(content.Content))
+            {
+                veto.Execute(content.Content);
+            }
+
+            return;
+        }
+
+        Close(content);
     }
 
     /// <summary>Closes without consulting the veto — used once the consumer has already decided.</summary>

@@ -17,6 +17,7 @@ public sealed class DockTabPane : DockPane, IDockNode
     private readonly ObservableCollection<IDockNode> _children = new();
     private IDockNode? _selectedChild;
     private string? _group;
+    private bool _isPersistent;
 
     public DockTabPane()
     {
@@ -66,6 +67,22 @@ public sealed class DockTabPane : DockPane, IDockNode
     {
         get => _group;
         set => Set(ref _group, value);
+    }
+
+    /// <summary>
+    /// Whether this pane survives losing its last child (§6.1). An emptied pane
+    /// normally collapses; a persistent one stays where the user put it and is
+    /// removed only by an explicit close.
+    /// </summary>
+    /// <remarks>
+    /// Carried by the pane and persisted with it, like <see cref="Group"/>: the
+    /// group declaration seeds the flag once and is never reconsulted, so a
+    /// pane dragged elsewhere keeps behaving the way the user has learnt.
+    /// </remarks>
+    public bool IsPersistent
+    {
+        get => _isPersistent;
+        set => Set(ref _isPersistent, value);
     }
 
     internal void Insert(int index, IDockNode child)
@@ -180,5 +197,6 @@ public sealed class DockTabPane : DockPane, IDockNode
 
     private void UpdateTitle() => Title = _selectedChild?.Title;
 
-    public override string ToString() => $"Tabs({_children.Count}{(Group is null ? "" : $", {Group}")})";
+    public override string ToString()
+        => $"Tabs({_children.Count}{(Group is null ? "" : $", {Group}")}{(IsPersistent ? ", persistent" : "")})";
 }

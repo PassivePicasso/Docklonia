@@ -24,6 +24,7 @@ Two steps. One include, one control.
 
   <dock:Dock.Groups>
     <dock:DockGroup Name="Tools" Seed="Right" SeedSize="0.25" />
+    <dock:DockGroup Name="Documents" Seed="Center" IsPersistent="True" />
   </dock:Dock.Groups>
 
   <dock:Dock.ItemDescriptors>
@@ -41,6 +42,12 @@ Two steps. One include, one control.
 
 `xmlns:dock="https://github.com/docklonia"`. No code-behind, no bootstrapper, no
 service registration.
+
+A group named on a descriptor is the region its items open into. `IsPersistent`
+says the region outlives its contents: closing everything in it leaves the pane
+where the user put it, and the next item opens back into it. Closing the pane
+itself still closes it — and closes each of its contents through that item's own
+`CloseCommand`, exactly as closing its tabs one at a time would.
 
 **Why the one include cannot be avoided.** Avalonia has no equivalent of WPF's
 `Themes/Generic.xaml` auto-discovery, so a library's default `ControlTheme`s are
