@@ -131,13 +131,3 @@ dotnet test
 
 MIT — see [LICENSE](LICENSE). The same license Avalonia itself uses, so adding
 Docklonia does not change a consuming application's licensing story.
-
-## Known behaviour
-
-**Group position amnesia.** A group's identity lives on its pane. Closing every
-tab in the group removes that pane through normalization, taking the group's
-position with it, so reopening a tool returns it to its seed rather than to where
-the user had moved it. This is accepted rather than fixed: persisting a
-group-to-last-position map is meaningful extra state for a modest gain. Auto-hide
-is deliberately *not* subject to this — restoring to the original location is the
-entire point there, so its restore anchor is persisted.
