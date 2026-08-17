@@ -93,8 +93,16 @@
       <Setter Property="Background" Value="{DynamicResource DockTitleBarActiveBackground}" />
     </Style>
 
-    <!-- A single tab carries no information the titlebar does not already show. -->
-    <Style Selector="^:single-tab /template/ dock|DockTabStripPanel#PART_TabStrip">
+    <!--
+      A single tab carries no information the titlebar does not already show —
+      except on a persistent pane, where the titlebar's close removes the region
+      and the tab's closes what is in it. Hidden there, one button would serve
+      two acts, and the one it performs is the destructive one.
+
+      Both halves are ordinary pseudo-class rules, so an application wanting the
+      strip always, or never, overrides this with a single selector.
+    -->
+    <Style Selector="^:single-tab:not(:persistent) /template/ dock|DockTabStripPanel#PART_TabStrip">
       <Setter Property="IsVisible" Value="False" />
     </Style>
 

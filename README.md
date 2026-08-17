@@ -43,6 +43,23 @@ Two steps. One include, one control.
 `xmlns:dock="https://github.com/docklonia"`. No code-behind, no bootstrapper, no
 service registration.
 
+A group named on a descriptor is the region its items open into. `IsPersistent`
+says the region outlives its contents: closing everything in it leaves the pane
+where the user put it, and the next item opens back into it. Closing the pane
+itself still closes it — and closes each of its contents through that item's own
+`CloseCommand`, exactly as closing its tabs one at a time would.
+
+Because those two closes differ, a persistent pane keeps its tab strip down to a
+single tab, where an ordinary pane hides it. That is a pseudo-class rule like any
+other, so an application that wants the strip always — or never — says so
+directly:
+
+```xml
+<Style Selector="dock|DockPaneControl:single-tab /template/ dock|DockTabStripPanel#PART_TabStrip">
+  <Setter Property="IsVisible" Value="True" />
+</Style>
+```
+
 ## Zero consumer entanglement
 
 Content view models are POCOs. No interface to implement, no base class, no

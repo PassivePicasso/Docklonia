@@ -3,6 +3,8 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.VisualTree;
+using Docklonia.Controls;
 using Docklonia.Descriptors;
 using Docklonia.Model;
 using Xunit;
@@ -227,6 +229,38 @@ public class ClosePaneTests
 
         Assert.Empty(control.Tabs);
     }
+
+    /// <summary>
+    /// A persistent pane down to one tab still shows its strip.
+    /// </summary>
+    /// <remarks>
+    /// The strip is hidden at a single tab because the titlebar already shows
+    /// the title. On a persistent pane the titlebar's close removes the region
+    /// and the tab's closes the document, so hiding the strip leaves the user
+    /// one button meaning whichever of the two they did not want.
+    /// </remarks>
+    [AvaloniaFact]
+    public void APersistentPaneKeepsItsStripDownToOneTab()
+    {
+        var (dock, items) = Build();
+
+        items.Add(new Doc("one", items));
+        items.Add(new Tool("explorer"));
+        Flush();
+
+        var documents = Control(dock, DocumentPane(dock));
+        var tools = Control(dock, dock.Layout!.AllPanes().OfType<DockTabPane>().Single(pane => pane.Group == "Explorers"));
+
+        Assert.True(((IPseudoClasses)documents.Classes).Contains(":persistent"));
+        Assert.True(Strip(documents).IsVisible, "the region's own tab must stay reachable");
+        Assert.False(Strip(tools).IsVisible, "an ordinary single-tab pane is unchanged");
+    }
+
+    private static DockPaneControl Control(Dock dock, IDockNode node)
+        => dock.PaneControls.Single(pane => ReferenceEquals(pane.Node, node));
+
+    private static Control Strip(DockPaneControl pane)
+        => pane.GetVisualDescendants().OfType<DockTabStripPanel>().Single();
 
     /// <summary>And the next document opens back into it.</summary>
     [AvaloniaFact]

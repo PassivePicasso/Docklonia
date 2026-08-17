@@ -30,11 +30,12 @@ namespace Docklonia.Controls;
 /// reachable from the pane menu and the keyboard).</para>
 ///
 /// <para><b>Pseudo-classes.</b> <c>:active</c>, <c>:floating</c>,
-/// <c>:maximized</c>, <c>:drop-target</c>, <c>:single-tab</c>.</para>
+/// <c>:maximized</c>, <c>:drop-target</c>, <c>:single-tab</c>,
+/// <c>:persistent</c>.</para>
 /// </remarks>
 [TemplatePart(TabStripPart, typeof(Panel))]
 [TemplatePart(ContentHostPart, typeof(ContentPresenter))]
-[PseudoClasses(":active", ":floating", ":maximized", ":drop-target", ":single-tab")]
+[PseudoClasses(":active", ":floating", ":maximized", ":drop-target", ":single-tab", ":persistent")]
 public class DockPaneControl : TemplatedControl
 {
     public const string TabStripPart = "PART_TabStrip";
@@ -171,6 +172,11 @@ public class DockPaneControl : TemplatedControl
         {
             SyncContent();
             SyncSelection();
+        }
+
+        if (e.PropertyName is nameof(DockTabPane.IsPersistent))
+        {
+            UpdatePseudoClasses();
         }
     }
 
@@ -340,6 +346,11 @@ public class DockPaneControl : TemplatedControl
     private void UpdatePseudoClasses()
     {
         PseudoClasses.Set(":active", IsActive);
+
+        // What the pane's own close button means depends on this: a persistent
+        // pane outlives its contents, so closing the last one and closing the
+        // region are different acts and cannot share one affordance (§6.1).
+        PseudoClasses.Set(":persistent", TabPane?.IsPersistent == true);
         PseudoClasses.Set(":floating", DockTree.FloatOf(Node) is not null);
         PseudoClasses.Set(":maximized", Owner?.Layout?.MaximizedPane is { } maximized && ReferenceEquals(maximized, Node));
 

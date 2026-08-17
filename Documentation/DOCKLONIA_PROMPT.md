@@ -1423,8 +1423,15 @@ Consequences the implementation must honour:
   crash — when an optional part is absent from a replacement template.
 - **State is expressed as pseudo-classes**, not as visuals set from code:
   selected, active, dragging, drop-target, floating, auto-hidden, maximized,
-  first/last-in-line. A restyler can then target every state without
-  subclassing.
+  persistent, first/last-in-line. A restyler can then target every state
+  without subclassing.
+- **An affordance whose meaning depends on state is decided in the theme, not
+  in code.** A pane down to one tab hides its strip, because the titlebar
+  already carries the title — but on a persistent pane (§6.1) the titlebar's
+  close removes the region while the tab's closes the document, so the strip
+  stays. Both are pseudo-class rules over `:single-tab` and `:persistent`,
+  which is what lets an application that disagrees say so in one selector
+  instead of asking for a property per policy.
 - **Theme resource keys are public API.** Name and document the brushes,
   thicknesses, and metrics the default theme consumes, so an application can
   restyle by overriding resources without replacing whole templates.
