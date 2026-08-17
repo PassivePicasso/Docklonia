@@ -100,7 +100,7 @@ public class Dock : TemplatedControl
         _floats = new DockFloatSurfaces(this);
         Activation = new DockActivation();
         Commands = new DockCommands(this);
-        Drag = new DockDragController(this);
+        Drag = new DockDragController(this, _guides);
         AutoHide = new DockAutoHideSurface(this);
         Keyboard = new DockKeyboard(this);
 
@@ -188,6 +188,9 @@ public class Dock : TemplatedControl
 
     internal DockGuideOverlay Guides => _guides;
 
+    /// <summary>Platform hosts for this Dock's floating windows, as drag surfaces (§7.2).</summary>
+    internal IReadOnlyCollection<Hosting.DockHost> FloatSurfaces => _floats.Surfaces;
+
     /// <summary>Edge strips and the slide-out flyout for auto-hidden panes (§5.3).</summary>
     internal DockAutoHideSurface AutoHide { get; }
 
@@ -212,12 +215,11 @@ public class Dock : TemplatedControl
             {
                 _overlayHost.Children.Add(AutoHide.Flyout);
             }
-
-            if (!_overlayHost.Children.Contains(_guides))
-            {
-                _overlayHost.Children.Add(_guides);
-            }
         }
+
+        // The guides are not hosted here: they move into the overlay layer of
+        // whichever TopLevel the drop target lives in, so a floating target
+        // draws its guides in its own window rather than in this one (§7.2).
 
         AutoHide.Register(DockEdge.Left, e.NameScope.Find<DockAutoHideStrip>(LeftStripPart));
         AutoHide.Register(DockEdge.Top, e.NameScope.Find<DockAutoHideStrip>(TopStripPart));
@@ -354,7 +356,7 @@ public class Dock : TemplatedControl
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        Drag.OnPointerMoved(e);
+        Drag.OnPointerMoved(this, e);
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)

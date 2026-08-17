@@ -122,6 +122,18 @@ public class DockPaneControl : TemplatedControl
     }
 
     /// <summary>Rebuilds the tab controls and the content host from the model.</summary>
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        Owner?.Drag.OnPointerMoved(this, e);
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        Owner?.Drag.OnPointerReleased(e);
+    }
+
     internal void Rebuild()
     {
         SyncTabs();

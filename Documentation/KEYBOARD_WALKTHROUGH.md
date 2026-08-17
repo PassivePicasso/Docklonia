@@ -25,6 +25,7 @@ pointer aside.
 | `←` `→` `↑` `↓` | Splitter | Resize in steps, clamped at `MinPaneSize` |
 | `Enter` / `Space` | Auto-hide button | Slide the pane out |
 | `Ctrl+P` | Auto-hide button | Re-pin into the tree |
+| `←` `→` `↑` `↓` | Flyout grip | Resize the flyout, clamped to its bounds |
 | `Escape` | During a drag | Cancel with no mutation |
 
 ## Walkthrough
@@ -82,7 +83,11 @@ engine's operations because both call the same mutation engine (§13).
    the nearest `Dock` edge. The remaining panes reflow to fill the space.
 3. `Tab` to the auto-hide button and press `Enter`. The pane slides out over the
    content as an overlay — it does not resize the layout or displace anything.
-4. Press `Ctrl+P` to re-pin.
+4. `Tab` to the grip on the flyout's inner edge and use the arrow keys. The
+   flyout resizes, and the new size is stored on the entry as a proportion, so it
+   persists across re-opening and across save/load. The grip is the same
+   `DockSplitter` that resizes a real split, so it behaves identically.
+5. Press `Ctrl+P` to re-pin.
 
 The pane returns **to where it was**, not to its seed. That works because the
 restore target is stored as a relative anchor — a surviving sibling's id plus a

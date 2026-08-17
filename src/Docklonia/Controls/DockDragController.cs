@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Docklonia.Dragging;
@@ -17,20 +18,30 @@ namespace Docklonia.Controls;
 /// disambiguated by position (§6.1): inside the strip the gesture reorders and
 /// shows no guides; leaving the strip turns it into a normal drag with full
 /// docking behaviour; returning reverts to reordering.</para>
+///
+/// <para>The pointer is captured on the <b>control that started the gesture</b>,
+/// never on the <c>Dock</c>. A pane inside a <c>FloatPane</c> lives in a
+/// different <see cref="TopLevel"/>, and capture does not cross top levels — so
+/// capturing on the <c>Dock</c> would silently break every drag that begins in a
+/// floating window.</para>
 /// </remarks>
 internal sealed class DockDragController
 {
     private readonly Dock _dock;
+    private readonly DockGuideOverlay _guides;
 
     private DockDragSession? _session;
     private DockTab? _gestureTab;
     private IDockNode? _gestureNode;
+    private FloatPane? _gestureFloat;
+    private Visual? _gestureSource;
     private Point _gestureOrigin;
-    private bool _reordering;
+    private OverlayLayer? _guideLayer;
 
-    internal DockDragController(Dock dock)
+    internal DockDragController(Dock dock, DockGuideOverlay guides)
     {
         _dock = dock;
+        _guides = guides;
     }
 
     private DockLayout Layout => _dock.EnsureLayout();
@@ -40,28 +51,36 @@ internal sealed class DockDragController
     /// <summary>A tab press. Past the threshold this becomes a reorder or a drag.</summary>
     internal void BeginTabGesture(DockTab tab, PointerPressedEventArgs e)
     {
+        Begin(tab, tab.Node, e);
         _gestureTab = tab;
-        _gestureNode = tab.Node;
-        _gestureOrigin = e.GetPosition(_dock);
-        _reordering = false;
-
-        e.Pointer.Capture(_dock);
     }
 
-    /// <summary>A titlebar press. Drags the whole pane, never a single tab.</summary>
+    /// <summary>
+    /// A titlebar press. Drags the whole pane; when that pane is the entire
+    /// contents of a floating window, the window itself becomes the drag visual.
+    /// </summary>
     internal void BeginPaneGesture(DockPaneControl pane, PointerPressedEventArgs e)
     {
-        _gestureTab = null;
-        _gestureNode = pane.Node;
-        _gestureOrigin = e.GetPosition(_dock);
-        _reordering = false;
+        Begin(pane, pane.Node, e);
 
-        e.Pointer.Capture(_dock);
+        var host = DockTree.FloatOf(pane.Node);
+        _gestureFloat = host is not null && ReferenceEquals(host.Child, pane.Node) ? host : null;
     }
 
-    internal void OnPointerMoved(PointerEventArgs e)
+    private void Begin(Visual source, IDockNode? node, PointerPressedEventArgs e)
     {
-        var screen = ToScreen(e);
+        _gestureSource = source;
+        _gestureTab = null;
+        _gestureFloat = null;
+        _gestureNode = node;
+        _gestureOrigin = e.GetPosition(source);
+
+        e.Pointer.Capture(source as IInputElement);
+    }
+
+    internal void OnPointerMoved(Visual source, PointerEventArgs e)
+    {
+        var screen = source.PointToScreen(e.GetPosition(source));
 
         if (_session is not null)
         {
@@ -69,15 +88,12 @@ internal sealed class DockDragController
             return;
         }
 
-        if (_gestureNode is null)
+        if (_gestureNode is null || _gestureSource is null)
         {
             return;
         }
 
-        var position = e.GetPosition(_dock);
-        var travelled = Point.Distance(position, _gestureOrigin);
-
-        if (travelled < Dock.DragThreshold)
+        if (Point.Distance(e.GetPosition(_gestureSource), _gestureOrigin) < Dock.DragThreshold)
         {
             return;
         }
@@ -108,19 +124,40 @@ internal sealed class DockDragController
         EndGesture();
     }
 
-    /// <summary>The innermost pane under a screen point, across this <c>Dock</c>'s own surface and its floats.</summary>
-    internal DockPaneControl? HitTest(PixelPoint screen)
+    /// <summary>
+    /// Whether the point falls on any surface this <c>Dock</c> owns — its own
+    /// control or any of its floating windows.
+    /// </summary>
+    /// <remarks>
+    /// Separate from pane hit-testing because an <b>empty</b> <c>Dock</c> has no
+    /// panes yet still accepts a drop: the outer guides already cover docking
+    /// into an empty <c>Dock</c> (§9), and without this a second window could
+    /// never receive its first pane.
+    /// </remarks>
+    internal bool ContainsScreenPoint(PixelPoint screen)
     {
-        foreach (var pane in _dock.PaneControls)
+        if (Contains(_dock, screen))
         {
-            if (!pane.IsAttachedToVisualTree() || TopLevel.GetTopLevel(pane) is null)
-            {
-                continue;
-            }
+            return true;
+        }
 
-            var local = pane.PointToClient(screen);
+        return _dock.FloatSurfaces.Any(host => host.RootVisual is { } visual && Contains(visual, screen));
+    }
 
-            if (new Rect(pane.Bounds.Size).Contains(local))
+    /// <summary>
+    /// The innermost pane under a screen point, or null when the point is over
+    /// the <c>Dock</c> but not over any pane. Floating surfaces are tested first,
+    /// since they sit above their owner.
+    /// </summary>
+    internal DockPaneControl? HitTest(PixelPoint screen, IDockNode? payload)
+    {
+        var panes = _dock.PaneControls
+            .Where(pane => !IsExcluded(pane, payload))
+            .OrderByDescending(pane => DockTree.FloatOf(pane.Node) is not null);
+
+        foreach (var pane in panes)
+        {
+            if (Contains(pane, screen))
             {
                 return pane;
             }
@@ -130,32 +167,77 @@ internal sealed class DockDragController
     }
 
     /// <summary>
-    /// Positions the guides over the hovered pane and reports which one the
-    /// cursor is on. Rendered by the resolved target <c>Dock</c>, in its own
-    /// overlay; exactly one <c>Dock</c> shows guides at a time (§7.2 step 5).
+    /// A dragged subtree cannot be its own drop target, and neither can anything
+    /// inside the floating window currently being moved — that window is the drag
+    /// visual, and hit-testing it would mask the surfaces beneath it.
     /// </summary>
+    private bool IsExcluded(DockPaneControl pane, IDockNode? payload)
+    {
+        if (!pane.IsAttachedToVisualTree() || TopLevel.GetTopLevel(pane) is null)
+        {
+            return true;
+        }
+
+        if (payload is not null && DockTree.Contains(payload, pane.Node))
+        {
+            return true;
+        }
+
+        return _session?.MovingFloat is { } moving && ReferenceEquals(DockTree.FloatOf(pane.Node), moving);
+    }
+
+    /// <summary>
+    /// Positions the guides over the resolved surface and reports which one the
+    /// cursor is on. Exactly one <c>Dock</c> shows guides at a time (§7.2 step 5).
+    /// </summary>
+    /// <remarks>
+    /// The overlay is hosted in the <see cref="OverlayLayer"/> of whichever
+    /// <see cref="TopLevel"/> the target lives in, and moves between them as the
+    /// cursor does. Anchoring it to the <c>Dock</c>'s own window instead would
+    /// draw the guides for a floating target in the wrong window entirely.
+    /// </remarks>
     internal (DockDirection Direction, bool IsOuter)? UpdateGuides(IDockNode? payload, DockPaneControl? pane, PixelPoint screen)
     {
-        var overlay = _dock.Guides;
-        overlay.IsVisible = true;
+        var inFloat = pane is not null && !ReferenceEquals(TopLevel.GetTopLevel(pane), TopLevel.GetTopLevel(_dock));
+        var anchor = inFloat ? (Visual)pane! : _dock;
+        var layer = OverlayLayer.GetOverlayLayer(anchor);
 
-        overlay.PaneBounds = pane is not null && pane.TranslatePoint(default, _dock) is { } origin
-            ? new Rect(origin, pane.Bounds.Size)
+        if (layer is null)
+        {
+            HideGuides();
+            return null;
+        }
+
+        Host(layer);
+
+        var surface = SurfaceBounds(layer, inFloat);
+
+        Canvas.SetLeft(_guides, surface.X);
+        Canvas.SetTop(_guides, surface.Y);
+        _guides.Width = surface.Width;
+        _guides.Height = surface.Height;
+        _guides.IsVisible = true;
+
+        _guides.PaneBounds = pane?.TranslatePoint(default, layer) is { } origin
+            ? new Rect(origin.X - surface.X, origin.Y - surface.Y, pane.Bounds.Width, pane.Bounds.Height)
             : default;
 
-        overlay.SetPermitted((direction, outer) => IsPermitted(payload, pane, direction, outer));
+        _guides.SetPermitted((direction, outer) => IsPermitted(payload, pane, direction, outer, inFloat));
 
-        var local = _dock.PointToClient(screen);
-        var hit = overlay.HitTest(local);
+        var local = layer.PointToClient(screen);
+        var hit = _guides.HitTest(new Point(local.X - surface.X, local.Y - surface.Y));
 
-        overlay.SetHot(hit?.Direction, hit?.IsOuter ?? false, PreviewFor(hit, pane));
+        _guides.SetHot(hit?.Direction, hit?.IsOuter ?? false, PreviewFor(hit, pane, surface, layer));
         return hit;
     }
 
     internal void HideGuides()
     {
-        _dock.Guides.SetHot(null, false, default);
-        _dock.Guides.IsVisible = false;
+        _guides.SetHot(null, false, default);
+        _guides.IsVisible = false;
+
+        _guideLayer?.Children.Remove(_guides);
+        _guideLayer = null;
     }
 
     /// <summary>
@@ -172,7 +254,7 @@ internal sealed class DockDragController
             return;
         }
 
-        if (isOuter || target is null)
+        if (isOuter || target is null || ReferenceEquals(target, dropped))
         {
             DockMutator.DockToRoot(Layout, dropped, direction);
         }
@@ -189,11 +271,18 @@ internal sealed class DockDragController
 
     /// <summary>
     /// Rule 3 of §6: a guide is shown only when its operation is permitted, so no
-    /// guide is ever offered for a drop that would then be rejected. A split is
-    /// offered only if both resulting panes would satisfy <c>MinPaneSize</c>.
+    /// guide is ever offered for a drop that would then be rejected.
     /// </summary>
-    private bool IsPermitted(IDockNode? payload, DockPaneControl? pane, DockDirection direction, bool outer)
+    private bool IsPermitted(IDockNode? payload, DockPaneControl? pane, DockDirection direction, bool outer, bool inFloat)
     {
+        // Outer guides act on the Dock root, which is not the surface being
+        // shown when the cursor is over a floating window. Offering them there
+        // would point at a region the user cannot see.
+        if (outer && inFloat)
+        {
+            return false;
+        }
+
         if (direction == DockDirection.Center)
         {
             // Tabbing has no size implication, so it survives even where the
@@ -201,8 +290,13 @@ internal sealed class DockDragController
             return !outer && pane is not null && !IsSelfDrop(payload, pane);
         }
 
-        var extent = SplitExtent(outer ? _dock.Bounds.Size : pane?.Bounds.Size ?? default, direction);
-        return extent >= _dock.MinPaneSize * 2 && (outer || (pane is not null && !IsSelfDrop(payload, pane)));
+        if (!outer && (pane is null || IsSelfDrop(payload, pane)))
+        {
+            return false;
+        }
+
+        var extent = SplitExtent(outer ? _dock.Bounds.Size : pane!.Bounds.Size, direction);
+        return extent >= _dock.MinPaneSize * 2;
     }
 
     private static bool IsSelfDrop(IDockNode? payload, DockPaneControl pane)
@@ -211,19 +305,20 @@ internal sealed class DockDragController
     private static double SplitExtent(Size size, DockDirection direction)
         => direction is DockDirection.Left or DockDirection.Right ? size.Width : size.Height;
 
-    /// <summary>The region the drop will occupy, shown as a preview (§6.1).</summary>
-    private Rect PreviewFor((DockDirection Direction, bool IsOuter)? hit, DockPaneControl? pane)
+    /// <summary>The region the drop will occupy, in the guide overlay's own coordinates (§6.1).</summary>
+    private Rect PreviewFor((DockDirection Direction, bool IsOuter)? hit, DockPaneControl? pane, Rect surface, Visual layer)
     {
         if (hit is not { } guide)
         {
             return default;
         }
 
-        var bounds = guide.IsOuter || pane is null
-            ? new Rect(_dock.Bounds.Size)
-            : pane.TranslatePoint(default, _dock) is { } origin
-                ? new Rect(origin, pane.Bounds.Size)
-                : new Rect(_dock.Bounds.Size);
+        var bounds = new Rect(surface.Size);
+
+        if (!guide.IsOuter && pane is not null && pane.TranslatePoint(default, layer) is { } origin)
+        {
+            bounds = new Rect(origin.X - surface.X, origin.Y - surface.Y, pane.Bounds.Width, pane.Bounds.Height);
+        }
 
         return guide.Direction switch
         {
@@ -235,6 +330,41 @@ internal sealed class DockDragController
         };
     }
 
+    /// <summary>The area the guides cover: a whole floating window, or this <c>Dock</c> within its window.</summary>
+    private Rect SurfaceBounds(Visual layer, bool inFloat)
+    {
+        if (inFloat)
+        {
+            return new Rect(layer.Bounds.Size);
+        }
+
+        return _dock.TranslatePoint(default, layer) is { } origin
+            ? new Rect(origin, _dock.Bounds.Size)
+            : new Rect(layer.Bounds.Size);
+    }
+
+    private void Host(OverlayLayer layer)
+    {
+        if (ReferenceEquals(_guideLayer, layer))
+        {
+            return;
+        }
+
+        _guideLayer?.Children.Remove(_guides);
+        layer.Children.Add(_guides);
+        _guideLayer = layer;
+    }
+
+    private static bool Contains(Visual visual, PixelPoint screen)
+    {
+        if (TopLevel.GetTopLevel(visual) is null || visual.Bounds.Width <= 0)
+        {
+            return false;
+        }
+
+        return new Rect(visual.Bounds.Size).Contains(visual.PointToClient(screen));
+    }
+
     private void StartDrag(PixelPoint screen)
     {
         if (_gestureNode is null)
@@ -243,7 +373,7 @@ internal sealed class DockDragController
         }
 
         _gestureTab?.SetDragging(true);
-        _session = DockDragSession.Begin(_dock, _gestureNode, screen);
+        _session = DockDragSession.Begin(_dock, _gestureNode, screen, _gestureFloat);
         _dock.SetDragging(true);
     }
 
@@ -270,7 +400,6 @@ internal sealed class DockDragController
             return;
         }
 
-        _reordering = true;
         DockMutator.Reorder(Layout, tab.Node, tabs.IndexOf(hovered.Node));
         _dock.NotifyLayoutChanged();
     }
@@ -280,11 +409,6 @@ internal sealed class DockDragController
 
     private static bool IsInsideStrip(DockTab tab, PointerEventArgs e)
     {
-        if (tab.Pane is null)
-        {
-            return false;
-        }
-
         var strip = tab.GetVisualParent();
         return strip is not null && new Rect(strip.Bounds.Size).Contains(e.GetPosition(strip));
     }
@@ -303,14 +427,13 @@ internal sealed class DockDragController
         return node;
     }
 
-    private PixelPoint ToScreen(PointerEventArgs e) => _dock.PointToScreen(e.GetPosition(_dock));
-
     private void EndGesture()
     {
         _gestureTab?.SetDragging(false);
         _gestureTab = null;
         _gestureNode = null;
-        _reordering = false;
+        _gestureFloat = null;
+        _gestureSource = null;
         _dock.SetDragging(false);
         HideGuides();
     }

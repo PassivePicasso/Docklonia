@@ -2,7 +2,6 @@ using Avalonia;
 using Dock = Docklonia.Controls.Dock;
 using Docklonia.Controls;
 using Docklonia.Model;
-using Docklonia.Model.Mutations;
 
 namespace Docklonia.Dragging;
 
@@ -24,37 +23,59 @@ namespace Docklonia.Dragging;
 /// restore, because nothing moved — and the tree is never in a transient state
 /// that could be serialized.</para>
 ///
-/// <para>The payload is a live <see cref="IDockNode"/> reference. Nothing is
-/// serialized, cloned, or reconstructed during a drag; the node is a view model,
-/// so this is just passing an object reference between two trees.</para>
+/// <para><b>A floating window drags as itself.</b> When the payload is the whole
+/// contents of a <see cref="FloatPane"/>, that window <i>is</i> the drag visual:
+/// it follows the cursor like an ordinary window, and no ghost is shown. Guides
+/// still resolve against every surface underneath it, so a float re-docks by the
+/// same gesture that moves it — which is what makes a float behave like any
+/// other pane rather than a special case.</para>
 /// </remarks>
 internal sealed class DockDragSession : IDisposable
 {
     private readonly Dock? _origin;
     private readonly IDockNode? _node;
     private readonly object?[] _payloadContent;
-    private readonly DragGhost _ghost;
+    private readonly DragGhost? _ghost;
+    private readonly FloatPane? _movingFloat;
+    private readonly PixelVector _grabOffset;
 
     private Dock? _target;
     private DockPaneControl? _targetPane;
     private DockDirection? _direction;
     private bool _isOuter;
+    private PixelPoint _screen;
 
-    private DockDragSession(Dock? origin, IDockNode? node, object?[] payloadContent, DragGhost ghost)
+    private DockDragSession(
+        Dock? origin,
+        IDockNode? node,
+        object?[] payloadContent,
+        DragGhost? ghost,
+        FloatPane? movingFloat,
+        PixelVector grabOffset)
     {
         _origin = origin;
         _node = node;
         _payloadContent = payloadContent;
         _ghost = ghost;
+        _movingFloat = movingFloat;
+        _grabOffset = grabOffset;
     }
 
     internal static DockDragSession? Current { get; private set; }
 
+    /// <summary>The floating window acting as its own drag visual, if any.</summary>
+    internal FloatPane? MovingFloat => _movingFloat;
+
     /// <summary>Begins a drag of an existing node.</summary>
-    internal static DockDragSession Begin(Dock origin, IDockNode node, PixelPoint screen)
+    internal static DockDragSession Begin(Dock origin, IDockNode node, PixelPoint screen, FloatPane? movingFloat)
     {
         var content = DockTree.ContentsIn(node).Select(item => item.Content).ToArray();
-        return Start(new DockDragSession(origin, node, content, DragGhost.Create(origin, node.Title)), screen);
+
+        // The float is the drag visual, so a ghost would be a second one.
+        var ghost = movingFloat is null ? DragGhost.Create(origin, node.Title) : null;
+        var grab = movingFloat is null ? default : screen - movingFloat.Position;
+
+        return Start(new DockDragSession(origin, node, content, ghost, movingFloat, grab), screen);
     }
 
     /// <summary>
@@ -63,7 +84,9 @@ internal sealed class DockDragSession : IDisposable
     /// library taking on native drag-and-drop.
     /// </summary>
     internal static DockDragSession BeginSourceless(Dock anchor, object content, string? title, PixelPoint screen)
-        => Start(new DockDragSession(null, null, new[] { (object?)content }, DragGhost.Create(anchor, title)), screen);
+        => Start(
+            new DockDragSession(null, null, new[] { (object?)content }, DragGhost.Create(anchor, title), null, default),
+            screen);
 
     private static DockDragSession Start(DockDragSession session, PixelPoint screen)
     {
@@ -82,7 +105,10 @@ internal sealed class DockDragSession : IDisposable
     /// </summary>
     internal void Update(PixelPoint screen)
     {
-        _ghost.MoveTo(screen);
+        _screen = screen;
+
+        _ghost?.MoveTo(screen);
+        _movingFloat?.MoveTo(screen - _grabOffset);
 
         var resolved = Resolve(screen);
 
@@ -125,17 +151,26 @@ internal sealed class DockDragSession : IDisposable
     /// <summary>
     /// Releasing over no accepting target floats the node on its <b>origin</b>
     /// <c>Dock</c> — never an arbitrary one, since only the origin is known to
-    /// describe it. A source-less drag simply cancels, because there is no origin
+    /// describe it. A float that was already floating simply stays where the user
+    /// dropped it, and a source-less drag cancels, because neither has an origin
     /// to return to (§7.4).
     /// </summary>
     private void DropOnNothing()
     {
+        if (_movingFloat is not null)
+        {
+            // Moving a window is a continuous gesture, so its geometry is written
+            // back once, here, rather than per frame (§9.2).
+            _origin?.NotifyLayoutChanged();
+            return;
+        }
+
         if (_origin is null || _node is null)
         {
             return;
         }
 
-        _origin.Drag.FloatAt(_node, _ghost.Position);
+        _origin.Drag.FloatAt(_node, _screen);
     }
 
     /// <summary>Escape, or loss of pointer capture. Nothing was detached, so there is nothing to undo.</summary>
@@ -143,22 +178,20 @@ internal sealed class DockDragSession : IDisposable
 
     /// <summary>
     /// Converts the screen point into each registered surface's own coordinate
-    /// space and hit-tests for the innermost pane. Z-order across windows
-    /// resolves ties: the topmost window wins.
+    /// space and hit-tests for the innermost pane. A <c>Dock</c> under the cursor
+    /// with no pane there is still a target, so an empty <c>Dock</c> can receive
+    /// its first pane through the outer guides.
     /// </summary>
     private (Dock? Dock, DockPaneControl? Pane) Resolve(PixelPoint screen)
     {
         foreach (var dock in DockRegistry.Docks.Reverse())
         {
-            if (!Accepts(dock))
+            if (!Accepts(dock) || !dock.Drag.ContainsScreenPoint(screen))
             {
                 continue;
             }
 
-            if (dock.Drag.HitTest(screen) is { } hit)
-            {
-                return (dock, hit);
-            }
+            return (dock, dock.Drag.HitTest(screen, _node));
         }
 
         return (null, null);
@@ -181,7 +214,7 @@ internal sealed class DockDragSession : IDisposable
     {
         _target?.Drag.HideGuides();
         _target = null;
-        _ghost.Dispose();
+        _ghost?.Dispose();
 
         if (ReferenceEquals(Current, this))
         {

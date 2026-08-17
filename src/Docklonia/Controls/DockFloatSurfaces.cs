@@ -30,6 +30,8 @@ internal sealed class DockFloatSurfaces : IDisposable
 
     internal IEnumerable<DockHost> Hosts => _hosts.Values;
 
+    internal IReadOnlyCollection<DockHost> Surfaces => _hosts.Values;
+
     internal void Attach(DockLayout? layout)
     {
         if (_layout is not null)
@@ -119,6 +121,14 @@ internal sealed class DockFloatSurfaces : IDisposable
             case nameof(FloatPane.WindowState):
                 host.WindowState = pane.WindowState;
                 break;
+
+            case nameof(FloatPane.Position):
+                host.Position = pane.Position;
+                break;
+
+            case nameof(FloatPane.Size):
+                host.Size = pane.Size;
+                break;
         }
     }
 
@@ -128,7 +138,12 @@ internal sealed class DockFloatSurfaces : IDisposable
         pane.Size = host.Size;
         pane.WindowState = host.WindowState;
 
-        _dock.NotifyLayoutChanged();
+        // Moving or resizing is continuous; the write-back happens once, when
+        // the gesture completes (§9.2).
+        if (!ReferenceEquals(Dragging.DockDragSession.Current?.MovingFloat, pane))
+        {
+            _dock.NotifyLayoutChanged();
+        }
     }
 
     /// <summary>A float never outlives its owner (§5.4).</summary>

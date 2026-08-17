@@ -30,7 +30,6 @@ public class DockSplitPresenter : Control
     private readonly DockPanePresenter _first = new();
     private readonly DockPanePresenter _second = new();
     private readonly DockSplitter _splitter = new();
-    private double _ratioAtDragStart;
 
     static DockSplitPresenter()
     {
@@ -42,8 +41,7 @@ public class DockSplitPresenter : Control
         LogicalChildren.AddRange(new Control[] { _first, _splitter, _second });
         VisualChildren.AddRange(new Control[] { _first, _splitter, _second });
 
-        _splitter.DragDelta += OnSplitterDragDelta;
-        _splitter.DragStarted += OnSplitterDragStarted;
+        _splitter.DragTo += OnSplitterDragTo;
         _splitter.DragCompleted += OnSplitterDragCompleted;
         _splitter.StepRequested += OnSplitterStep;
     }
@@ -170,10 +168,14 @@ public class DockSplitPresenter : Control
         InvalidateMeasure();
     }
 
-    private void OnSplitterDragStarted(object? sender, VectorEventArgs e)
-        => _ratioAtDragStart = Split?.Ratio ?? 0.5;
+    /// <summary>
+    /// Converts the grip's requested position straight into a ratio. Absolute
+    /// rather than incremental, so no error can accumulate across the gesture
+    /// and the grip cannot drift away from the cursor.
+    /// </summary>
+    internal void SetRatioFromPosition(Point position) => OnSplitterDragTo(position);
 
-    private void OnSplitterDragDelta(object? sender, VectorEventArgs e)
+    private void OnSplitterDragTo(Point position)
     {
         if (Split is null)
         {
@@ -187,16 +189,15 @@ public class DockSplitPresenter : Control
             return;
         }
 
-        var delta = IsHorizontal ? e.Vector.X : e.Vector.Y;
-        Split.Ratio = ClampToFloor(_ratioAtDragStart + delta / extent, extent);
+        var offset = IsHorizontal ? position.X : position.Y;
+        Split.Ratio = ClampToFloor(offset / extent, extent);
     }
 
     /// <summary>
     /// Splitter drag is a continuous gesture, so the layout is written back once
     /// on completion rather than per frame (§9.2).
     /// </summary>
-    private void OnSplitterDragCompleted(object? sender, VectorEventArgs e)
-        => Owner?.NotifyLayoutChanged();
+    private void OnSplitterDragCompleted() => Owner?.NotifyLayoutChanged();
 
     private void OnSplitterStep(double step)
     {

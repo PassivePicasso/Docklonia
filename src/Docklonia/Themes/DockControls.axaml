@@ -54,6 +54,7 @@
                     Background="{DynamicResource DockTitleBarBackground}">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <Button Name="PART_MenuButton" Grid.Column="0" Content="&#x2261;"
+                        ToolTip.Tip="Pane menu"
                         Theme="{StaticResource DockChromeButton}" />
                 <TextBlock Grid.Column="1"
                            Text="{Binding Node.Title, RelativeSource={RelativeSource TemplatedParent}}"
@@ -62,9 +63,12 @@
                            Margin="6,0"
                            TextTrimming="CharacterEllipsis" />
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                  <Button Name="PART_MinimizeButton" Content="&#x2500;" Theme="{StaticResource DockChromeButton}" />
-                  <Button Name="PART_MaximizeButton" Content="&#x25A1;" Theme="{StaticResource DockChromeButton}" />
-                  <Button Name="PART_CloseButton" Content="&#x2715;" Theme="{StaticResource DockChromeButton}" />
+                  <Button Name="PART_MinimizeButton" Content="&#x2500;"
+                          ToolTip.Tip="Auto-hide" Theme="{StaticResource DockChromeButton}" />
+                  <Button Name="PART_MaximizeButton" Content="&#x25A1;"
+                          ToolTip.Tip="Maximize" Theme="{StaticResource DockChromeButton}" />
+                  <Button Name="PART_CloseButton" Content="&#x2715;"
+                          ToolTip.Tip="Close pane" Theme="{StaticResource DockChromeButton}" />
                 </StackPanel>
               </Grid>
             </Border>
@@ -96,6 +100,13 @@
 
     <Style Selector="^:floating /template/ Button#PART_MinimizeButton">
       <Setter Property="IsVisible" Value="True" />
+      <!-- Minimize on a float is a real window minimize, never auto-hide (§5.3). -->
+      <Setter Property="ToolTip.Tip" Value="Minimize window" />
+    </Style>
+
+    <!-- Wording follows the same pseudo-class the visuals do. -->
+    <Style Selector="^:maximized /template/ Button#PART_MaximizeButton">
+      <Setter Property="ToolTip.Tip" Value="Restore" />
     </Style>
   </ControlTheme>
 
@@ -148,6 +159,7 @@
               <Button Name="PART_CloseButton"
                       Grid.Column="1"
                       Content="&#x2715;"
+                      ToolTip.Tip="Close tab"
                       IsVisible="False"
                       Width="16" Height="16"
                       Margin="6,0,0,0"
@@ -279,6 +291,46 @@
     </Style>
   </ControlTheme>
 
+  <!--
+    The flyout slides over the content. Its grip sits on the inner edge — the
+    side facing the content — so resizing it reads the same way as resizing a
+    split.
+  -->
+  <ControlTheme x:Key="{x:Type dock:DockAutoHideFlyout}" TargetType="dock:DockAutoHideFlyout">
+    <Setter Property="Background" Value="{DynamicResource DockPaneBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DockPaneBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}">
+          <Panel>
+            <Decorator Name="PART_Content" />
+            <dock:DockSplitter Name="PART_Resizer" />
+          </Panel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:left /template/ dock|DockSplitter#PART_Resizer">
+      <Setter Property="HorizontalAlignment" Value="Right" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="^:right /template/ dock|DockSplitter#PART_Resizer">
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="^:top /template/ dock|DockSplitter#PART_Resizer">
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="^:bottom /template/ dock|DockSplitter#PART_Resizer">
+      <Setter Property="VerticalAlignment" Value="Top" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+  </ControlTheme>
+
   <ControlTheme x:Key="{x:Type dock:DockAutoHideButton}" TargetType="dock:DockAutoHideButton">
     <Setter Property="Background" Value="{DynamicResource DockTabBackground}" />
     <Setter Property="Foreground" Value="{DynamicResource DockTabForeground}" />
@@ -293,6 +345,7 @@
                        Foreground="{TemplateBinding Foreground}"
                        VerticalAlignment="Center" />
             <Button Name="PART_PinButton" Content="&#x1F4CC;"
+                    ToolTip.Tip="Re-pin into the layout"
                     Width="16" Height="16"
                     Theme="{StaticResource DockChromeButton}" />
           </StackPanel>

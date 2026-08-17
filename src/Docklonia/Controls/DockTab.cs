@@ -163,6 +163,18 @@ public class DockTab : TemplatedControl
         }
     }
 
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        Owner?.Drag.OnPointerMoved(this, e);
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        Owner?.Drag.OnPointerReleased(e);
+    }
+
     internal void SetDragging(bool dragging) => PseudoClasses.Set(":dragging", dragging);
 
     private bool MoveBy(int delta)

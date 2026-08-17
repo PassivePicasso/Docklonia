@@ -37,6 +37,10 @@ public sealed class AutoHideEntry
     /// <summary>Where the pane sat relative to <see cref="AnchorId"/>.</summary>
     public DockDirection AnchorDirection { get; }
 
-    /// <summary>The split ratio to restore, so the pane returns at its original size.</summary>
-    public double Ratio { get; }
+    /// <summary>
+    /// The pane's share of the <c>Dock</c>: the size its flyout opens at, and the
+    /// split ratio it restores to. Resizing the flyout updates it, and it
+    /// serializes with the entry, so a resized flyout survives save and load.
+    /// </summary>
+    public double Ratio { get; internal set; }
 }

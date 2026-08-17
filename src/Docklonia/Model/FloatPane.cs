@@ -78,5 +78,11 @@ public sealed class FloatPane : DockPane
 
     public override IReadOnlyList<IDockNode> Children => new[] { _child };
 
+    /// <summary>
+    /// Moves the window during a drag. The model leads and the host follows, so
+    /// the same code path serves a pointer drag and a restored layout.
+    /// </summary>
+    internal void MoveTo(PixelPoint position) => Position = position;
+
     public override string ToString() => $"Float({_child})";
 }
