@@ -110,11 +110,7 @@ public class DockTabStripPanel : Panel
                 var tab = line.Tabs[i];
                 tab.Arrange(new Rect(x, y, width, line.Height));
 
-                if (tab is Control control)
-                {
-                    control.Classes.Set(FirstInLine, i == 0);
-                    control.Classes.Set(LastInLine, i == line.Count - 1);
-                }
+                (tab as DockTab)?.SetLinePosition(i == 0, i == line.Count - 1);
 
                 x += width;
             }

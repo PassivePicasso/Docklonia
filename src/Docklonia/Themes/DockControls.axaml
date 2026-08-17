@@ -1,0 +1,313 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:dock="using:Docklonia.Controls"
+                    xmlns:drag="using:Docklonia.Dragging">
+
+  <!--
+    Every visual here is template-supplied and every state is a pseudo-class
+    (§12). Nothing below is drawn from code, and no control measures against a
+    particular template's structure.
+  -->
+
+  <ControlTheme x:Key="{x:Type dock:Dock}" TargetType="dock:Dock">
+    <Setter Property="Background" Value="{DynamicResource DockBackground}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <DockPanel Background="{TemplateBinding Background}" LastChildFill="True">
+          <dock:DockAutoHideStrip Name="PART_TopStrip" DockPanel.Dock="Top" IsVisible="False" />
+          <dock:DockAutoHideStrip Name="PART_BottomStrip" DockPanel.Dock="Bottom" IsVisible="False" />
+          <dock:DockAutoHideStrip Name="PART_LeftStrip" DockPanel.Dock="Left" IsVisible="False" />
+          <dock:DockAutoHideStrip Name="PART_RightStrip" DockPanel.Dock="Right" IsVisible="False" />
+          <Panel>
+          <Decorator Name="PART_Root" />
+          <!-- Shown only when the layout is empty; not a drop target itself (§9). -->
+          <ContentPresenter Name="PART_EmptyContent"
+                            Content="{TemplateBinding EmptyContent}"
+                            IsVisible="False"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+          <Panel Name="PART_Overlay" />
+          </Panel>
+        </DockPanel>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:empty /template/ ContentPresenter#PART_EmptyContent">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type dock:DockPaneControl}" TargetType="dock:DockPaneControl">
+    <Setter Property="Background" Value="{DynamicResource DockPaneBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DockPaneBorderBrush}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource DockPaneBorderThickness}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}">
+          <DockPanel LastChildFill="True">
+
+            <Border Name="PART_TitleBar"
+                    DockPanel.Dock="Top"
+                    Height="{DynamicResource DockTitleBarHeight}"
+                    Background="{DynamicResource DockTitleBarBackground}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Name="PART_MenuButton" Grid.Column="0" Content="&#x2261;"
+                        Theme="{StaticResource DockChromeButton}" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Node.Title, RelativeSource={RelativeSource TemplatedParent}}"
+                           Foreground="{DynamicResource DockTitleForeground}"
+                           VerticalAlignment="Center"
+                           Margin="6,0"
+                           TextTrimming="CharacterEllipsis" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                  <Button Name="PART_MinimizeButton" Content="&#x2500;" Theme="{StaticResource DockChromeButton}" />
+                  <Button Name="PART_MaximizeButton" Content="&#x25A1;" Theme="{StaticResource DockChromeButton}" />
+                  <Button Name="PART_CloseButton" Content="&#x2715;" Theme="{StaticResource DockChromeButton}" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!--
+              The strip is measured by the panel itself and reports the full
+              height of every line, so growing it displaces the content area
+              rather than drawing over it (§4).
+            -->
+            <dock:DockTabStripPanel Name="PART_TabStrip"
+                                    DockPanel.Dock="Top"
+                                    MaxTabWidth="{DynamicResource DockTabMaxWidth}"
+                                    MinTabWidth="{DynamicResource DockTabMinWidth}" />
+
+            <ContentPresenter Name="PART_ContentHost" />
+          </DockPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:active /template/ Border#PART_TitleBar">
+      <Setter Property="Background" Value="{DynamicResource DockTitleBarActiveBackground}" />
+    </Style>
+
+    <!-- A single tab carries no information the titlebar does not already show. -->
+    <Style Selector="^:single-tab /template/ dock|DockTabStripPanel#PART_TabStrip">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <Style Selector="^:floating /template/ Button#PART_MinimizeButton">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="DockChromeButton" TargetType="Button">
+    <Setter Property="Width" Value="26" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource DockTitleForeground}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            Foreground="{TemplateBinding Foreground}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource DockTabHoverBackground}" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type dock:DockTab}" TargetType="dock:DockTab">
+    <Setter Property="Background" Value="{DynamicResource DockTabBackground}" />
+    <Setter Property="Foreground" Value="{DynamicResource DockTabForeground}" />
+    <Setter Property="Padding" Value="{DynamicResource DockTabPadding}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root"
+                Background="{TemplateBinding Background}"
+                CornerRadius="{DynamicResource DockTabCornerRadius}"
+                Margin="0,0,1,0">
+          <Border Name="PART_Accent" BorderBrush="Transparent" BorderThickness="0,2,0,0">
+            <!--
+              Label and close button sit side by side and are never overlaid,
+              so a tab's required width accounts for both (§4).
+            -->
+            <Grid ColumnDefinitions="*,Auto" Margin="{TemplateBinding Padding}">
+              <TextBlock Grid.Column="0"
+                         Text="{Binding Node.Title, RelativeSource={RelativeSource TemplatedParent}}"
+                         Foreground="{TemplateBinding Foreground}"
+                         VerticalAlignment="Center"
+                         TextTrimming="CharacterEllipsis" />
+              <Button Name="PART_CloseButton"
+                      Grid.Column="1"
+                      Content="&#x2715;"
+                      IsVisible="False"
+                      Width="16" Height="16"
+                      Margin="6,0,0,0"
+                      Theme="{StaticResource DockChromeButton}" />
+            </Grid>
+          </Border>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:closable /template/ Button#PART_CloseButton">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:pointerover /template/ Border#PART_Root">
+      <Setter Property="Background" Value="{DynamicResource DockTabHoverBackground}" />
+    </Style>
+    <Style Selector="^:selected /template/ Border#PART_Root">
+      <Setter Property="Background" Value="{DynamicResource DockTabSelectedBackground}" />
+    </Style>
+    <Style Selector="^:active /template/ Border#PART_Accent">
+      <Setter Property="BorderBrush" Value="{DynamicResource DockTabActiveAccent}" />
+    </Style>
+    <Style Selector="^:dragging">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type dock:DockSplitter}" TargetType="dock:DockSplitter">
+    <Setter Property="Background" Value="{DynamicResource DockSplitterBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" />
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:horizontal">
+      <Setter Property="Width" Value="{DynamicResource DockSplitterThickness}" />
+      <Setter Property="Cursor" Value="SizeWestEast" />
+    </Style>
+    <Style Selector="^:vertical">
+      <Setter Property="Height" Value="{DynamicResource DockSplitterThickness}" />
+      <Setter Property="Cursor" Value="SizeNorthSouth" />
+    </Style>
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource DockSplitterHoverBrush}" />
+    </Style>
+    <Style Selector="^:dragging">
+      <Setter Property="Background" Value="{DynamicResource DockSplitterHoverBrush}" />
+    </Style>
+    <Style Selector="^:focus">
+      <Setter Property="Background" Value="{DynamicResource DockSplitterHoverBrush}" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type dock:DockGuideButton}" TargetType="dock:DockGuideButton">
+    <Setter Property="Background" Value="{DynamicResource DockGuideBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DockGuideBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource DockGuideGlyphBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{DynamicResource DockGuideCornerRadius}"
+                Margin="2">
+          <Path Name="PART_Glyph"
+                Fill="{TemplateBinding Foreground}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Data="M 0,0 L 14,0 L 14,14 L 0,14 Z" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:left /template/ Path#PART_Glyph">
+      <Setter Property="Data" Value="M 0,0 L 7,0 L 7,14 L 0,14 Z M 8,0 L 14,0 L 14,14 L 8,14 Z" />
+    </Style>
+    <Style Selector="^:right /template/ Path#PART_Glyph">
+      <Setter Property="Data" Value="M 0,0 L 6,0 L 6,14 L 0,14 Z M 7,0 L 14,0 L 14,14 L 7,14 Z" />
+    </Style>
+    <Style Selector="^:top /template/ Path#PART_Glyph">
+      <Setter Property="Data" Value="M 0,0 L 14,0 L 14,7 L 0,7 Z M 0,8 L 14,8 L 14,14 L 0,14 Z" />
+    </Style>
+    <Style Selector="^:bottom /template/ Path#PART_Glyph">
+      <Setter Property="Data" Value="M 0,0 L 14,0 L 14,6 L 0,6 Z M 0,7 L 14,7 L 14,14 L 0,14 Z" />
+    </Style>
+    <Style Selector="^:hot">
+      <Setter Property="Background" Value="{DynamicResource DockGuideHotBackground}" />
+      <Setter Property="Foreground" Value="{DynamicResource DockGuideHotGlyphBrush}" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type drag:DragGhostPresenter}" TargetType="drag:DragGhostPresenter">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{DynamicResource DockGhostBackground}"
+                BorderBrush="{DynamicResource DockTabActiveAccent}"
+                BorderThickness="1"
+                CornerRadius="3"
+                Padding="8,4">
+          <TextBlock Text="{TemplateBinding Title}"
+                     Foreground="{DynamicResource DockTitleForeground}"
+                     VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type dock:DockAutoHideStrip}" TargetType="dock:DockAutoHideStrip">
+    <Setter Property="Background" Value="{DynamicResource DockTitleBarBackground}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" Padding="2">
+          <StackPanel Name="PART_Items" Spacing="2" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:left /template/ StackPanel#PART_Items">
+      <Setter Property="Orientation" Value="Vertical" />
+    </Style>
+    <Style Selector="^:right /template/ StackPanel#PART_Items">
+      <Setter Property="Orientation" Value="Vertical" />
+    </Style>
+    <Style Selector="^:top /template/ StackPanel#PART_Items">
+      <Setter Property="Orientation" Value="Horizontal" />
+    </Style>
+    <Style Selector="^:bottom /template/ StackPanel#PART_Items">
+      <Setter Property="Orientation" Value="Horizontal" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type dock:DockAutoHideButton}" TargetType="dock:DockAutoHideButton">
+    <Setter Property="Background" Value="{DynamicResource DockTabBackground}" />
+    <Setter Property="Foreground" Value="{DynamicResource DockTabForeground}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root"
+                Background="{TemplateBinding Background}"
+                CornerRadius="2"
+                Padding="6,3">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="{TemplateBinding Title}"
+                       Foreground="{TemplateBinding Foreground}"
+                       VerticalAlignment="Center" />
+            <Button Name="PART_PinButton" Content="&#x1F4CC;"
+                    Width="16" Height="16"
+                    Theme="{StaticResource DockChromeButton}" />
+          </StackPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^ /template/ Border#PART_Root">
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="^:pointerover /template/ Border#PART_Root">
+      <Setter Property="Background" Value="{DynamicResource DockTabHoverBackground}" />
+    </Style>
+    <Style Selector="^:open /template/ Border#PART_Root">
+      <Setter Property="Background" Value="{DynamicResource DockTabSelectedBackground}" />
+    </Style>
+  </ControlTheme>
+
+</ResourceDictionary>

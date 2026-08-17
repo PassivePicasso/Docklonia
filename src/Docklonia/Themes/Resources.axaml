@@ -1,0 +1,73 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Theme resource keys are public API (§12). An application restyles by
+    overriding these in its own resources rather than replacing whole templates,
+    so they carry the same stability commitment as a method signature.
+  -->
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Default">
+      <SolidColorBrush x:Key="DockBackground" Color="#F3F3F3" />
+      <SolidColorBrush x:Key="DockPaneBackground" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="DockPaneBorderBrush" Color="#D0D0D0" />
+      <SolidColorBrush x:Key="DockTitleBarBackground" Color="#ECECEC" />
+      <SolidColorBrush x:Key="DockTitleBarActiveBackground" Color="#CCE4F7" />
+      <SolidColorBrush x:Key="DockTitleForeground" Color="#1B1B1B" />
+      <SolidColorBrush x:Key="DockTabBackground" Color="#E4E4E4" />
+      <SolidColorBrush x:Key="DockTabHoverBackground" Color="#D6E9FA" />
+      <SolidColorBrush x:Key="DockTabSelectedBackground" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="DockTabActiveAccent" Color="#0078D4" />
+      <SolidColorBrush x:Key="DockTabForeground" Color="#1B1B1B" />
+      <SolidColorBrush x:Key="DockSplitterBrush" Color="#00000000" />
+      <SolidColorBrush x:Key="DockSplitterHoverBrush" Color="#0078D4" />
+      <SolidColorBrush x:Key="DockGuideBackground" Color="#F7FAFD" />
+      <SolidColorBrush x:Key="DockGuideBorderBrush" Color="#5A8DB8" />
+      <SolidColorBrush x:Key="DockGuideHotBackground" Color="#0078D4" />
+      <SolidColorBrush x:Key="DockGuideGlyphBrush" Color="#3C6E97" />
+      <SolidColorBrush x:Key="DockGuideHotGlyphBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="DockDropPreviewBrush" Color="#380078D4" />
+      <SolidColorBrush x:Key="DockDropPreviewBorderBrush" Color="#0078D4" />
+      <SolidColorBrush x:Key="DockGhostBackground" Color="#F0FFFFFF" />
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="DockBackground" Color="#1F1F1F" />
+      <SolidColorBrush x:Key="DockPaneBackground" Color="#252526" />
+      <SolidColorBrush x:Key="DockPaneBorderBrush" Color="#3A3A3C" />
+      <SolidColorBrush x:Key="DockTitleBarBackground" Color="#2D2D30" />
+      <SolidColorBrush x:Key="DockTitleBarActiveBackground" Color="#094771" />
+      <SolidColorBrush x:Key="DockTitleForeground" Color="#F1F1F1" />
+      <SolidColorBrush x:Key="DockTabBackground" Color="#2D2D30" />
+      <SolidColorBrush x:Key="DockTabHoverBackground" Color="#3E3E42" />
+      <SolidColorBrush x:Key="DockTabSelectedBackground" Color="#1E1E1E" />
+      <SolidColorBrush x:Key="DockTabActiveAccent" Color="#0098FF" />
+      <SolidColorBrush x:Key="DockTabForeground" Color="#F1F1F1" />
+      <SolidColorBrush x:Key="DockSplitterBrush" Color="#00000000" />
+      <SolidColorBrush x:Key="DockSplitterHoverBrush" Color="#0098FF" />
+      <SolidColorBrush x:Key="DockGuideBackground" Color="#2D2D30" />
+      <SolidColorBrush x:Key="DockGuideBorderBrush" Color="#5A8DB8" />
+      <SolidColorBrush x:Key="DockGuideHotBackground" Color="#0098FF" />
+      <SolidColorBrush x:Key="DockGuideGlyphBrush" Color="#9CC7E8" />
+      <SolidColorBrush x:Key="DockGuideHotGlyphBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="DockDropPreviewBrush" Color="#380098FF" />
+      <SolidColorBrush x:Key="DockDropPreviewBorderBrush" Color="#0098FF" />
+      <SolidColorBrush x:Key="DockGhostBackground" Color="#F02D2D30" />
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Metrics. Also public API. -->
+  <Thickness x:Key="DockPaneBorderThickness">1</Thickness>
+  <Thickness x:Key="DockTabPadding">8,4</Thickness>
+  <CornerRadius x:Key="DockTabCornerRadius">3,3,0,0</CornerRadius>
+  <CornerRadius x:Key="DockGuideCornerRadius">4</CornerRadius>
+  <x:Double x:Key="DockSplitterThickness">6</x:Double>
+  <x:Double x:Key="DockTitleBarHeight">28</x:Double>
+  <x:Double x:Key="DockTabMaxWidth">240</x:Double>
+  <x:Double x:Key="DockTabMinWidth">48</x:Double>
+  <x:Double x:Key="DockAutoHideStripThickness">24</x:Double>
+
+</ResourceDictionary>

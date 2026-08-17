@@ -1,0 +1,127 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dock="https://github.com/docklonia"
+        xmlns:vm="using:Docklonia.Sample.ViewModels"
+        x:Class="Docklonia.Sample.MainWindow"
+        Title="Docklonia Sample"
+        Width="1180" Height="760">
+
+  <DockPanel LastChildFill="True">
+
+    <Border DockPanel.Dock="Top" Padding="8" Background="#22808080">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="New document" Command="{Binding AddDocument}" />
+        <Button Content="New terminal" Command="{Binding AddTerminal}" />
+        <Separator />
+        <Button Content="Save layout" Command="{Binding SaveLayout}" />
+        <Button Content="Load layout" Command="{Binding LoadLayout}" />
+        <Button Content="Reset layout" Command="{Binding ResetLayout}" />
+        <Separator />
+        <Button Content="Toggle dirty (veto close)" Command="{Binding ToggleDirty}" />
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Padding="8,4" Background="#22808080">
+      <TextBlock Text="{Binding Status}" />
+    </Border>
+
+    <Grid ColumnDefinitions="*,4,300">
+
+      <!--
+        On the Dock element itself, every binding is an ordinary
+        DataContext-relative binding. Inside a descriptor, every binding is
+        per-item. The distinction is structural rather than a convention (§3.7).
+      -->
+      <dock:Dock Grid.Column="0"
+                 ItemsSource="{Binding Panels}"
+                 Layout="{Binding Layout, Mode=TwoWay}"
+                 ActiveContent="{Binding ActiveContent, Mode=TwoWay}"
+                 MinPaneSize="120">
+
+        <!-- Layout regions, declared once. Seed lives here, not on descriptors (§3.9). -->
+        <dock:Dock.Groups>
+          <dock:DockGroup Name="Tools" Seed="Right" SeedSize="0.24" />
+          <dock:DockGroup Name="Output" Seed="Bottom" SeedSize="0.28" />
+        </dock:Dock.Groups>
+
+        <dock:Dock.ItemDescriptors>
+
+          <!-- Per-instance identity: the document's own path is the content key. -->
+          <dock:DockItemDescriptor DataType="vm:CodeDocument"
+                                   Title="{Binding FileName}"
+                                   ContentKey="{Binding FullPath}"
+                                   CanClose="{Binding IsClosable}"
+                                   CloseCommand="{Binding CloseCommand}"
+                                   ClosedCommand="{Binding ClosedCommand}"
+                                   MenuItems="{Binding ContextActions}" />
+
+          <dock:DockItemDescriptor DataType="vm:TerminalPane"
+                                   Title="{Binding SessionName}"
+                                   ContentKey="{Binding SessionId}"
+                                   Group="Output" />
+
+          <!-- Constants: one Inspector per Dock, never closable, docked with the tools. -->
+          <dock:DockItemDescriptor DataType="vm:InspectorViewModel"
+                                   Title="Inspector"
+                                   ContentKey="Inspector"
+                                   CanClose="False"
+                                   Group="Tools" />
+
+          <dock:DockItemDescriptor DataType="vm:OutlineViewModel"
+                                   Title="Outline"
+                                   ContentKey="Outline"
+                                   Group="Tools" />
+
+          <!-- Authored panes travel as data too, so they need a descriptor. -->
+          <dock:DockItemDescriptor DataType="dock:AuthoredContent"
+                                   Title="{Binding Title}"
+                                   ContentKey="{Binding ContentKey}" />
+
+        </dock:Dock.ItemDescriptors>
+
+        <!--
+          A statically-authored pane alongside the bound documents (§9.1). Its
+          content is captured as a template, so duplicating it builds a second,
+          independent instance rather than sharing one view model.
+        -->
+        <dock:Dock.Items>
+          <dock:DockItem Title="Palette" ContentKey="Palette" Group="Tools">
+            <StackPanel Margin="10" Spacing="6">
+              <TextBlock Text="Authored pane" FontWeight="SemiBold" />
+              <TextBlock Text="Declared in XAML, not bound." TextWrapping="Wrap" />
+              <TextBox Watermark="Independent per duplicate" />
+            </StackPanel>
+          </dock:DockItem>
+        </dock:Dock.Items>
+
+      </dock:Dock>
+
+      <GridSplitter Grid.Column="1" Background="#33808080" />
+
+      <!--
+        A tool-only Dock. Its descriptor set declares no CodeDocument, so
+        dragging a document here shows no guides and cannot be dropped —
+        silently, because that separation is the intent rather than an error
+        (§3.7, §7).
+      -->
+      <dock:Dock Grid.Column="2"
+                 ItemsSource="{Binding ToolPanels}"
+                 Layout="{Binding ToolLayout, Mode=TwoWay}"
+                 MinPaneSize="100">
+        <dock:Dock.EmptyContent>
+          <TextBlock Text="Tool-only Dock.&#10;Documents are refused here."
+                     TextAlignment="Center" Opacity="0.6" />
+        </dock:Dock.EmptyContent>
+        <dock:Dock.ItemDescriptors>
+          <dock:DockItemDescriptor DataType="vm:TerminalPane"
+                                   Title="{Binding SessionName}"
+                                   ContentKey="{Binding SessionId}" />
+          <dock:DockItemDescriptor DataType="vm:OutlineViewModel"
+                                   Title="Outline"
+                                   ContentKey="Outline" />
+        </dock:Dock.ItemDescriptors>
+      </dock:Dock>
+
+    </Grid>
+  </DockPanel>
+</Window>

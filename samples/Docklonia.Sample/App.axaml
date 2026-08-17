@@ -1,0 +1,53 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Docklonia.Sample.ViewModels"
+             x:Class="Docklonia.Sample.App"
+             RequestedThemeVariant="Default">
+
+  <Application.Styles>
+    <FluentTheme />
+    <!-- The single theme include (§1). Nothing else is registered. -->
+    <StyleInclude Source="avares://Docklonia/Themes/Docklonia.axaml" />
+  </Application.Styles>
+
+  <Application.DataTemplates>
+
+    <!--
+      Ordinary templates for this application's own view-model types, exactly as
+      they would be written without the docking library (§3.8). None of them
+      mentions a Docklonia type, and none carries title or close metadata — that
+      comes from the descriptors instead.
+    -->
+
+    <DataTemplate DataType="vm:CodeDocument">
+      <TextBox Text="{Binding Text}"
+               AcceptsReturn="True"
+               TextWrapping="NoWrap"
+               FontFamily="Cascadia Code,Consolas,monospace"
+               BorderThickness="0" />
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:TerminalPane">
+      <ItemsControl ItemsSource="{Binding Lines}" Margin="8"
+                    FontFamily="Cascadia Code,Consolas,monospace" />
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:InspectorViewModel">
+      <StackPanel Margin="10" Spacing="6">
+        <TextBlock Text="Inspector" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Selection}" TextWrapping="Wrap" />
+      </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate DataType="vm:OutlineViewModel">
+      <ItemsControl ItemsSource="{Binding Symbols}" Margin="10" />
+    </DataTemplate>
+
+    <!-- Contributed menu entries are the application's own command objects. -->
+    <DataTemplate DataType="vm:ContextAction">
+      <TextBlock Text="{Binding Title}" />
+    </DataTemplate>
+
+  </Application.DataTemplates>
+
+</Application>

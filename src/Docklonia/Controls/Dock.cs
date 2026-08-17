@@ -41,6 +41,10 @@ public class Dock : TemplatedControl
 {
     public const string RootPart = "PART_Root";
     public const string OverlayPart = "PART_Overlay";
+    public const string LeftStripPart = "PART_LeftStrip";
+    public const string TopStripPart = "PART_TopStrip";
+    public const string RightStripPart = "PART_RightStrip";
+    public const string BottomStripPart = "PART_BottomStrip";
 
     /// <summary>Default floor on pane size, in device-independent pixels.</summary>
     public const double DefaultMinPaneSize = 80d;
@@ -95,6 +99,7 @@ public class Dock : TemplatedControl
         Activation = new DockActivation();
         Commands = new DockCommands(this);
         Drag = new DockDragController(this);
+        AutoHide = new DockAutoHideSurface(this);
 
         DataTemplates.Add(AuthoredContentTemplate.Instance);
         GotFocus += OnGotFocus;
@@ -180,6 +185,9 @@ public class Dock : TemplatedControl
 
     internal DockGuideOverlay Guides => _guides;
 
+    /// <summary>Edge strips and the slide-out flyout for auto-hidden panes (§5.3).</summary>
+    internal DockAutoHideSurface AutoHide { get; }
+
     internal DockDescriptorSet Descriptors { get; private set; } = new(new object(), Array.Empty<DockItemDescriptor>());
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
@@ -189,10 +197,23 @@ public class Dock : TemplatedControl
         _rootHost = e.NameScope.Find<Decorator>(RootPart);
         _overlayHost = e.NameScope.Find<Panel>(OverlayPart);
 
-        if (_overlayHost is not null && !_overlayHost.Children.Contains(_guides))
+        if (_overlayHost is not null)
         {
-            _overlayHost.Children.Add(_guides);
+            if (!_overlayHost.Children.Contains(AutoHide.Flyout))
+            {
+                _overlayHost.Children.Add(AutoHide.Flyout);
+            }
+
+            if (!_overlayHost.Children.Contains(_guides))
+            {
+                _overlayHost.Children.Add(_guides);
+            }
         }
+
+        AutoHide.Register(DockEdge.Left, e.NameScope.Find<DockAutoHideStrip>(LeftStripPart));
+        AutoHide.Register(DockEdge.Top, e.NameScope.Find<DockAutoHideStrip>(TopStripPart));
+        AutoHide.Register(DockEdge.Right, e.NameScope.Find<DockAutoHideStrip>(RightStripPart));
+        AutoHide.Register(DockEdge.Bottom, e.NameScope.Find<DockAutoHideStrip>(BottomStripPart));
 
         _guides.IsVisible = false;
         RebuildRoot();
@@ -243,6 +264,9 @@ public class Dock : TemplatedControl
 
     /// <summary>Lets the drag controller reflect gesture state without exposing pseudo-classes.</summary>
     internal void SetDragging(bool dragging) => PseudoClasses.Set(":dragging", dragging);
+
+    /// <summary>Slides an auto-hidden pane out over the content (§5.3).</summary>
+    internal void ShowAutoHideFlyout(AutoHideEntry entry, DockAutoHideButton button) => AutoHide.Show(entry, button);
 
     /// <summary>Removes a node without consulting the consumer's close veto (§3.10).</summary>
     internal void RemoveNode(IDockNode node) => Commands.Close(node);
@@ -371,6 +395,7 @@ public class Dock : TemplatedControl
         PseudoClasses.Set(":maximized", layout.MaximizedPane is not null);
 
         _floats.Sync();
+        AutoHide.Refresh();
         RefreshRoot();
     }
 

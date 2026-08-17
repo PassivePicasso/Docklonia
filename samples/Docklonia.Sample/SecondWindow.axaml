@@ -1,0 +1,40 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dock="https://github.com/docklonia"
+        xmlns:vm="using:Docklonia.Sample.ViewModels"
+        x:Class="Docklonia.Sample.SecondWindow"
+        Title="Docklonia Sample — Second Window"
+        Width="620" Height="520">
+
+  <!--
+    A second Dock in a separate top-level window, over the same documents. It
+    declares descriptors for CodeDocument, so a document dragged out of the main
+    window docks here — and the same document can sit in tabs in both windows at
+    once, sharing one view model (§3.5, §7).
+  -->
+  <dock:Dock ItemsSource="{Binding ToolPanels}"
+             MinPaneSize="100">
+
+    <dock:Dock.EmptyContent>
+      <TextBlock Text="Drag a document here from the main window."
+                 TextAlignment="Center" Opacity="0.6" />
+    </dock:Dock.EmptyContent>
+
+    <dock:Dock.ItemDescriptors>
+      <dock:DockItemDescriptor DataType="vm:CodeDocument"
+                               Title="{Binding FileName}"
+                               ContentKey="{Binding FullPath}"
+                               CanClose="{Binding IsClosable}" />
+      <dock:DockItemDescriptor DataType="vm:TerminalPane"
+                               Title="{Binding SessionName}"
+                               ContentKey="{Binding SessionId}" />
+      <dock:DockItemDescriptor DataType="vm:InspectorViewModel"
+                               Title="Inspector"
+                               ContentKey="Inspector" />
+      <dock:DockItemDescriptor DataType="vm:OutlineViewModel"
+                               Title="Outline"
+                               ContentKey="Outline" />
+    </dock:Dock.ItemDescriptors>
+
+  </dock:Dock>
+</Window>

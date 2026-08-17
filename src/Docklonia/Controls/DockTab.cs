@@ -142,6 +142,17 @@ public class DockTab : TemplatedControl
 
     internal void SetDragging(bool dragging) => PseudoClasses.Set(":dragging", dragging);
 
+    /// <summary>
+    /// Set by the strip during arrange. A pseudo-class may only be applied by
+    /// the control that owns it, so the panel reports the position and the tab
+    /// records it (§12).
+    /// </summary>
+    internal void SetLinePosition(bool isFirst, bool isLast)
+    {
+        PseudoClasses.Set(":first-in-line", isFirst);
+        PseudoClasses.Set(":last-in-line", isLast);
+    }
+
     private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
         if (Node is not null)

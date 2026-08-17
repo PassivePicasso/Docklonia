@@ -1,0 +1,39 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    The default theme is one merged dictionary (§12), included once:
+
+      <Application.Styles>
+        <StyleInclude Source="avares://Docklonia/Themes/Docklonia.axaml" />
+      </Application.Styles>
+
+    Why the include cannot be avoided (§1). Avalonia has no equivalent of WPF's
+    Themes/Generic.xaml auto-discovery, so a control library's default
+    ControlThemes are never located automatically. The two ways to avoid the
+    include are both worse than requiring it:
+
+      - Merging into Application.Current.Resources from a static constructor
+        mutates global application state as a side effect of instantiating a
+        control, and races with whatever the application merged itself.
+
+      - Merging into each control's own Resources works, but Avalonia resolves
+        resources from the control outward. A dictionary attached at the control
+        would therefore shadow the application's own overrides, defeating §12's
+        contract that an application can restyle by overriding theme resource
+        keys.
+
+    One StyleInclude keeps resolution order correct, which is exactly what makes
+    the styling contract hold.
+  -->
+
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Docklonia/Themes/Resources.axaml" />
+        <ResourceInclude Source="avares://Docklonia/Themes/DockControls.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+</Styles>
