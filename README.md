@@ -42,15 +42,6 @@ Two steps. One include, one control.
 `xmlns:dock="https://github.com/docklonia"`. No code-behind, no bootstrapper, no
 service registration.
 
-**Why the one include cannot be avoided.** Avalonia has no equivalent of WPF's
-`Themes/Generic.xaml` auto-discovery, so a library's default `ControlTheme`s are
-never located automatically. Merging into `Application.Current.Resources` from a
-static constructor would mutate global state as a side effect of constructing a
-control; merging into each control's own `Resources` would shadow the
-application's overrides, since Avalonia resolves resources from the control
-outward — defeating the styling contract. One `StyleInclude` keeps resolution
-order correct.
-
 ## Zero consumer entanglement
 
 Content view models are POCOs. No interface to implement, no base class, no
