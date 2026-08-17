@@ -244,7 +244,7 @@ internal sealed class DockDragController
     /// Detach and insert as one operation, through the same engine used for
     /// same-<c>Dock</c> docking. No separate cross-window code path (§7.2 step 6).
     /// </summary>
-    internal void CompleteDrop(IDockNode? node, object?[] payload, DockPaneControl? pane, DockDirection direction, bool isOuter)
+    internal void CompleteDrop(Dock? origin, IDockNode? node, object?[] payload, DockPaneControl? pane, DockDirection direction, bool isOuter)
     {
         var target = pane?.Node;
         var dropped = node ?? CreateNodeForExternalPayload(payload);
@@ -254,13 +254,31 @@ internal sealed class DockDragController
             return;
         }
 
+        // The node is detached from whichever layout owns it and inserted into
+        // this one, as a single operation.
+        var source = origin is not null && !ReferenceEquals(origin, _dock) ? origin.EnsureLayout() : Layout;
+        var crossDock = !ReferenceEquals(source, Layout);
+
+        if (crossDock)
+        {
+            origin!.Coordinator.Release(dropped);
+        }
+
         if (isOuter || target is null || ReferenceEquals(target, dropped))
         {
-            DockMutator.DockToRoot(Layout, dropped, direction);
+            DockMutator.MoveToRoot(source, Layout, dropped, direction);
         }
         else
         {
-            DockMutator.Dock(Layout, dropped, target, direction);
+            DockMutator.Move(source, Layout, dropped, target, direction);
+        }
+
+        if (crossDock)
+        {
+            // Metadata resolves live, per owning Dock (§3.7): the node now
+            // presents under this Dock's descriptors, not the originating one's.
+            _dock.Coordinator.Adopt(dropped);
+            origin!.NotifyLayoutChanged();
         }
 
         _dock.ActivateNode(DockTree.ContentsIn(dropped).FirstOrDefault() ?? dropped);
@@ -275,6 +293,14 @@ internal sealed class DockDragController
     /// </summary>
     private bool IsPermitted(IDockNode? payload, DockPaneControl? pane, DockDirection direction, bool outer, bool inFloat)
     {
+        // An empty Dock has nothing to split, and all four edges would produce
+        // the identical result of simply becoming the root. Offering four guides
+        // for one outcome is noise, so the only guide is Center: put it here.
+        if (IsEmpty)
+        {
+            return direction == DockDirection.Center && !outer;
+        }
+
         // Outer guides act on the Dock root, which is not the surface being
         // shown when the cursor is over a floating window. Offering them there
         // would point at a region the user cannot see.
@@ -298,6 +324,9 @@ internal sealed class DockDragController
         var extent = SplitExtent(outer ? _dock.Bounds.Size : pane!.Bounds.Size, direction);
         return extent >= _dock.MinPaneSize * 2;
     }
+
+    /// <summary>Nothing docked and nothing floating, so there is no pane to dock relative to.</summary>
+    private bool IsEmpty => _dock.Layout?.Root is null;
 
     private static bool IsSelfDrop(IDockNode? payload, DockPaneControl pane)
         => payload is not null && (ReferenceEquals(payload, pane.Node) || DockTree.Contains(payload, pane.Node));

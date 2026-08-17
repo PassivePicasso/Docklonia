@@ -62,7 +62,7 @@ internal sealed class DockItemCoordinator : IDisposable
         var live = Items().Concat(AuthoredItems()).ToArray();
 
         AdoptNodesFromLoadedLayout(layout, live);
-        DropNodesForAbsentItems(layout, live);
+        DropUnmatchedNodes(layout);
 
         descriptors.ValidateKeys(live
             .Select(item => new KeyValuePair<object, string?>(item, KeyOf(item)))
@@ -87,6 +87,55 @@ internal sealed class DockItemCoordinator : IDisposable
 
     internal ItemMetadata? MetadataFor(DockContent content)
         => _metadata.GetValueOrDefault(content);
+
+    /// <summary>
+    /// Stops tracking a subtree that is leaving for another <c>Dock</c>.
+    /// </summary>
+    /// <remarks>
+    /// The bindings are torn down but no close is signalled: the item's view has
+    /// moved, not closed, so <c>ClosedCommand</c> must not fire (§3.10). The item
+    /// may still sit in this <c>Dock</c>'s collection, and releasing it here is
+    /// what lets placement re-introduce it should it ever be needed again.
+    /// </remarks>
+    internal void Release(IDockNode node)
+    {
+        foreach (var content in DockTree.ContentsIn(node).ToArray())
+        {
+            if (!_metadata.Remove(content, out var metadata))
+            {
+                continue;
+            }
+
+            if (metadata.Item is { } item && _nodesByItem.TryGetValue(item, out var nodes))
+            {
+                nodes.Remove(content);
+
+                if (nodes.Count == 0)
+                {
+                    _nodesByItem.Remove(item);
+                }
+            }
+
+            metadata.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Takes over a subtree that arrived from another <c>Dock</c>, re-resolving
+    /// every node against this <c>Dock</c>'s descriptors (§3.7). Describe-and-
+    /// forbid already guaranteed the drop was only offered because this
+    /// <c>Dock</c> can describe the content.
+    /// </summary>
+    internal void Adopt(IDockNode node)
+    {
+        foreach (var content in DockTree.ContentsIn(node).ToArray())
+        {
+            if (content.Content is { } item && !_metadata.ContainsKey(content))
+            {
+                Track(item, content);
+            }
+        }
+    }
 
     /// <summary>
     /// Removes a node and, when it was the last view of its item, invokes the
@@ -193,17 +242,23 @@ internal sealed class DockItemCoordinator : IDisposable
     }
 
     /// <summary>
-    /// A key with no matching item yields a <b>dropped</b> node, never a
-    /// fabricated one (§8). An empty tab would be a node the user cannot reason
+    /// A serialized key with no matching item yields a <b>dropped</b> node, never
+    /// a fabricated one (§8). An empty tab would be a node the user cannot reason
     /// about; dropping it runs the same normalization every other removal does.
     /// </summary>
-    private void DropNodesForAbsentItems(DockLayout layout, IReadOnlyList<object> items)
+    /// <remarks>
+    /// Only nodes still awaiting content are dropped — those are the ones a
+    /// layout document produced and load-time matching could not satisfy. A node
+    /// already holding live content that simply is not in <b>this</b> collection
+    /// arrived by drag from another <c>Dock</c> (§7), and content keys are
+    /// <c>Dock</c>-scoped, so its absence here says nothing about it. Dropping it
+    /// would delete a pane the user just moved.
+    /// </remarks>
+    private void DropUnmatchedNodes(DockLayout layout)
     {
-        var live = new HashSet<object>(items, ReferenceComparer.Instance);
-
         foreach (var node in layout.AllPanes().OfType<DockContent>().ToArray())
         {
-            if (node.Content is null || live.Contains(node.Content))
+            if (node.Content is not null)
             {
                 continue;
             }

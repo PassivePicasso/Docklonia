@@ -18,8 +18,23 @@ public static class DockMutator
     /// insertion at the destination are one operation.
     /// </summary>
     public static void Dock(DockLayout layout, IDockNode node, IDockNode target, DockDirection direction, double ratio = 0.5)
+        => Move(layout, layout, node, target, direction, ratio);
+
+    /// <summary>
+    /// Moves a node out of <paramref name="from"/> and into
+    /// <paramref name="to"/>. Cross-window docking is exactly this with the two
+    /// layouts differing (§7.2 step 6) — there is no separate code path.
+    /// </summary>
+    /// <remarks>
+    /// The source layout must be the one that actually <b>owns</b> the node.
+    /// Detaching against the destination would follow the node's parent links
+    /// correctly but leave the origin's own root pointing at a subtree that is no
+    /// longer there, so the origin would keep presenting a node it no longer has.
+    /// </remarks>
+    public static void Move(DockLayout from, DockLayout to, IDockNode node, IDockNode target, DockDirection direction, double ratio = 0.5)
     {
-        ArgumentNullException.ThrowIfNull(layout);
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(to);
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(target);
 
@@ -33,7 +48,8 @@ public static class DockMutator
             throw new InvalidOperationException("Cannot dock a node into its own subtree.");
         }
 
-        TreeSurgery.Detach(layout, node);
+        TreeSurgery.Detach(from, node);
+        var layout = to;
 
         if (direction == DockDirection.Center)
         {
@@ -44,6 +60,7 @@ public static class DockMutator
             Split(layout, node, target, direction, ratio);
         }
 
+        from.MarkChanged();
         layout.MarkChanged();
     }
 
@@ -54,12 +71,18 @@ public static class DockMutator
     /// where the direction came from.
     /// </summary>
     public static void DockToRoot(DockLayout layout, IDockNode node, DockDirection direction, double size = 0.25)
+        => MoveToRoot(layout, layout, node, direction, size);
+
+    /// <summary>Cross-layout form of <see cref="DockToRoot"/>; see <see cref="Move"/> for why the source matters.</summary>
+    public static void MoveToRoot(DockLayout from, DockLayout to, IDockNode node, DockDirection direction, double size = 0.25)
     {
-        ArgumentNullException.ThrowIfNull(layout);
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(to);
         ArgumentNullException.ThrowIfNull(node);
 
-        TreeSurgery.Detach(layout, node);
+        TreeSurgery.Detach(from, node);
 
+        var layout = to;
         var root = layout.Root;
 
         if (root is null || ReferenceEquals(root, node))

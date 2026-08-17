@@ -136,7 +136,7 @@ internal sealed class DockDragSession : IDisposable
         {
             if (_target is not null && _direction is { } direction)
             {
-                _target.Drag.CompleteDrop(_node, _payloadContent, _targetPane, direction, _isOuter);
+                _target.Drag.CompleteDrop(_origin, _node, _payloadContent, _targetPane, direction, _isOuter);
                 return;
             }
 
