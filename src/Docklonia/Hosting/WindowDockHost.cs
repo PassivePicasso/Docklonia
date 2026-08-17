@@ -17,7 +17,13 @@ internal sealed class WindowDockHost : DockHost
     {
         _window = new Window
         {
-            SystemDecorations = WindowDecorations.None,
+            // A float carries a resizable frame; the drag ghost carries none.
+            // The hint keeps Windows from drawing that frame itself, which
+            // would put a system line above the float's own chrome.
+            WindowDecorations = hitTestable
+                ? WindowDecorations.BorderOnly
+                : WindowDecorations.None,
+            ExtendClientAreaToDecorationsHint = hitTestable,
             ShowInTaskbar = false,
             Background = null,
             TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent },
