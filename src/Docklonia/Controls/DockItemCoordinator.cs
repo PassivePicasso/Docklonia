@@ -282,7 +282,7 @@ internal sealed class DockItemCoordinator : IDisposable
         var node = new DockContent(item);
         Track(item, node);
 
-        DockPlacement.Place(layout, _dock.Activation, node, GroupOf(item, descriptor), _dock.Groups);
+        DockPlacement.Place(layout, _dock.Activation, node, GroupOf(item, descriptor), _dock.EffectiveGroups);
     }
 
     private string? KeyOf(object item)

@@ -13,28 +13,13 @@
     once, sharing one view model (§3.5, §7).
   -->
   <dock:Dock ItemsSource="{Binding ToolPanels}"
+             ItemDescriptors="{StaticResource WorkspaceDescriptors}"
              MinPaneSize="100">
 
     <dock:Dock.EmptyContent>
       <TextBlock Text="Drag a document here from the main window."
                  TextAlignment="Center" Opacity="0.6" />
     </dock:Dock.EmptyContent>
-
-    <dock:Dock.ItemDescriptors>
-      <dock:DockItemDescriptor DataType="vm:CodeDocument"
-                               Title="{Binding FileName}"
-                               ContentKey="{Binding FullPath}"
-                               CanClose="{Binding IsClosable}" />
-      <dock:DockItemDescriptor DataType="vm:TerminalPane"
-                               Title="{Binding SessionName}"
-                               ContentKey="{Binding SessionId}" />
-      <dock:DockItemDescriptor DataType="vm:InspectorViewModel"
-                               Title="Inspector"
-                               ContentKey="Inspector" />
-      <dock:DockItemDescriptor DataType="vm:OutlineViewModel"
-                               Title="Outline"
-                               ContentKey="Outline" />
-    </dock:Dock.ItemDescriptors>
 
   </dock:Dock>
 </Window>

@@ -100,12 +100,13 @@
       <GridSplitter Grid.Column="1" Background="#33808080" />
 
       <!--
-        A tool-only Dock. Its descriptor set declares no CodeDocument, so
-        dragging a document here shows no guides and cannot be dropped —
-        silently, because that separation is the intent rather than an error
-        (§3.7, §7).
+        A tool-only Dock. Its descriptor set arrives from the `tools` style in
+        App.axaml and declares no CodeDocument, so dragging a document here
+        shows no guides and cannot be dropped — silently, because that
+        separation is the intent rather than an error (§3.7, §7).
       -->
       <dock:Dock Grid.Column="2"
+                 Classes="tools"
                  ItemsSource="{Binding ToolPanels}"
                  Layout="{Binding ToolLayout, Mode=TwoWay}"
                  MinPaneSize="100">
@@ -113,14 +114,6 @@
           <TextBlock Text="Tool-only Dock.&#10;Documents are refused here."
                      TextAlignment="Center" Opacity="0.6" />
         </dock:Dock.EmptyContent>
-        <dock:Dock.ItemDescriptors>
-          <dock:DockItemDescriptor DataType="vm:TerminalPane"
-                                   Title="{Binding SessionName}"
-                                   ContentKey="{Binding SessionId}" />
-          <dock:DockItemDescriptor DataType="vm:OutlineViewModel"
-                                   Title="Outline"
-                                   ContentKey="Outline" />
-        </dock:Dock.ItemDescriptors>
       </dock:Dock>
 
     </Grid>

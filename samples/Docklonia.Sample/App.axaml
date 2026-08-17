@@ -1,13 +1,57 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:dock="https://github.com/docklonia"
              xmlns:vm="using:Docklonia.Sample.ViewModels"
              x:Class="Docklonia.Sample.App"
              RequestedThemeVariant="Default">
+
+  <Application.Resources>
+
+    <!--
+      A descriptor set authored once and assigned to a Dock by name. The
+      descriptors hold unevaluated bindings and no per-Dock state, so one
+      instance may serve any number of Docks (§3.7).
+    -->
+    <dock:DockItemDescriptors x:Key="WorkspaceDescriptors">
+      <dock:DockItemDescriptor DataType="vm:CodeDocument"
+                               Title="{Binding FileName}"
+                               ContentKey="{Binding FullPath}"
+                               CanClose="{Binding IsClosable}" />
+      <dock:DockItemDescriptor DataType="vm:TerminalPane"
+                               Title="{Binding SessionName}"
+                               ContentKey="{Binding SessionId}" />
+      <dock:DockItemDescriptor DataType="vm:InspectorViewModel"
+                               Title="Inspector"
+                               ContentKey="Inspector" />
+      <dock:DockItemDescriptor DataType="vm:OutlineViewModel"
+                               Title="Outline"
+                               ContentKey="Outline" />
+    </dock:DockItemDescriptors>
+
+  </Application.Resources>
 
   <Application.Styles>
     <FluentTheme />
     <!-- The single theme include (§1). Nothing else is registered. -->
     <StyleInclude Source="avares://Docklonia/Themes/Docklonia.axaml" />
+
+    <!--
+      The other delivery route: a class confers the set, so `Classes="tools"`
+      declares a Dock a tool area. Declaring no CodeDocument is what refuses
+      documents there (§3.7).
+    -->
+    <Style Selector="dock|Dock.tools">
+      <Setter Property="ItemDescriptors">
+        <dock:DockItemDescriptors>
+          <dock:DockItemDescriptor DataType="vm:TerminalPane"
+                                   Title="{Binding SessionName}"
+                                   ContentKey="{Binding SessionId}" />
+          <dock:DockItemDescriptor DataType="vm:OutlineViewModel"
+                                   Title="Outline"
+                                   ContentKey="Outline" />
+        </dock:DockItemDescriptors>
+      </Setter>
+    </Style>
   </Application.Styles>
 
   <Application.DataTemplates>

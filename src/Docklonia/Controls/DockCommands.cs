@@ -160,7 +160,7 @@ internal sealed class DockCommands
 
     internal void Restore(AutoHideEntry entry)
     {
-        AutoHideOperations.Restore(Layout, entry, _dock.Groups);
+        AutoHideOperations.Restore(Layout, entry, _dock.EffectiveGroups);
         _dock.NotifyLayoutChanged();
     }
 

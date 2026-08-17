@@ -71,6 +71,39 @@ the source**. `{Binding FileName}` inside a descriptor means *"for each
 `CodeDocument`, bind to that document's `FileName`"*, and it stays live, so
 renaming a document renames its tab.
 
+## Sharing a descriptor set
+
+`ItemDescriptors` and `Groups` are styled properties over named collection
+types, so a set is authored once and given to as many `Dock`s as you like. A
+descriptor holds unevaluated bindings and no per-`Dock` state; each `Dock`
+realizes them independently per item.
+
+```xml
+<Application.Resources>
+  <dock:DockItemDescriptors x:Key="WorkspaceDescriptors">
+    <dock:DockItemDescriptor DataType="vm:CodeDocument"
+                             Title="{Binding FileName}"
+                             ContentKey="{Binding FullPath}" />
+  </dock:DockItemDescriptors>
+</Application.Resources>
+```
+
+```xml
+<dock:Dock ItemDescriptors="{StaticResource WorkspaceDescriptors}" />
+```
+
+Or confer the set with a class, which is how a `Dock` is declared a tool area —
+one that declares no document type refuses documents (§3.7):
+
+```xml
+<Style Selector="dock|Dock.tools">
+  <Setter Property="ItemDescriptors" Value="{StaticResource ToolDescriptors}" />
+</Style>
+```
+
+Descriptors authored inline on the element outrank a style's, per the ordinary
+XAML precedence rule.
+
 The single library type a consumer holds is the opaque `DockLayout` on the shell
 view model. It is stored and handed back, never inspected.
 

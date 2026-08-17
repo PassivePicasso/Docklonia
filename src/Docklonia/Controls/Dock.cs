@@ -57,6 +57,19 @@ public class Dock : TemplatedControl
     public static readonly StyledProperty<IEnumerable?> ItemsSourceProperty =
         AvaloniaProperty.Register<Dock, IEnumerable?>(nameof(ItemsSource));
 
+    /// <remarks>
+    /// Registered with a null default, never an empty collection: a styled
+    /// property's default value is one object shared by every instance, so a
+    /// collection default would pool the descriptors of every <c>Dock</c> that
+    /// did not set one. The per-instance collection is made by the CLR getter.
+    /// </remarks>
+    public static readonly StyledProperty<DockItemDescriptors?> ItemDescriptorsProperty =
+        AvaloniaProperty.Register<Dock, DockItemDescriptors?>(nameof(ItemDescriptors));
+
+    /// <inheritdoc cref="ItemDescriptorsProperty"/>
+    public static readonly StyledProperty<DockGroups?> GroupsProperty =
+        AvaloniaProperty.Register<Dock, DockGroups?>(nameof(Groups));
+
     public static readonly StyledProperty<DockLayout?> LayoutProperty =
         AvaloniaProperty.Register<Dock, DockLayout?>(nameof(Layout), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
 
@@ -84,12 +97,14 @@ public class Dock : TemplatedControl
     private Panel? _overlayHost;
     private DockPanePresenter? _rootPresenter;
     private bool _writingBack;
+    private bool _attached;
 
     static Dock()
     {
         LayoutProperty.Changed.AddClassHandler<Dock>((dock, e) => dock.OnLayoutChanged(e));
         ItemsSourceProperty.Changed.AddClassHandler<Dock>((dock, e) => dock._coordinator.SetItemsSource(e.NewValue as IEnumerable));
         ActiveContentProperty.Changed.AddClassHandler<Dock>((dock, e) => dock.OnActiveContentChanged(e));
+        ItemDescriptorsProperty.Changed.AddClassHandler<Dock>((dock, _) => dock.OnItemDescriptorsChanged());
         MinPaneSizeProperty.Changed.AddClassHandler<Dock>((dock, _) => dock.InvalidateMeasure());
         FocusableProperty.OverrideDefaultValue<Dock>(true);
     }
@@ -115,11 +130,23 @@ public class Dock : TemplatedControl
         set => SetValue(ItemsSourceProperty, value);
     }
 
-    /// <summary>Per-item-type metadata (§3.7). Mandatory: content with no matching descriptor is never docked.</summary>
-    public ObservableCollection<DockItemDescriptor> ItemDescriptors { get; } = new();
+    /// <summary>
+    /// Per-item-type metadata (§3.7). Mandatory: content with no matching
+    /// descriptor is never docked. Assignable, so one authored set can be shared
+    /// from a resource or conferred by a style.
+    /// </summary>
+    public DockItemDescriptors ItemDescriptors
+    {
+        get => Materialize(ItemDescriptorsProperty, static () => new DockItemDescriptors());
+        set => SetValue(ItemDescriptorsProperty, value);
+    }
 
-    /// <summary>Named layout regions, declared once (§3.9).</summary>
-    public ObservableCollection<DockGroup> Groups { get; } = new();
+    /// <summary>Named layout regions, declared once (§3.9). Shareable on the same terms as <see cref="ItemDescriptors"/>.</summary>
+    public DockGroups Groups
+    {
+        get => Materialize(GroupsProperty, static () => new DockGroups());
+        set => SetValue(GroupsProperty, value);
+    }
 
     /// <summary>Statically-authored panes (§9.1). Coexist with <see cref="ItemsSource"/> in one layout tree.</summary>
     [Content]
@@ -199,6 +226,18 @@ public class Dock : TemplatedControl
 
     internal DockDescriptorSet Descriptors { get; private set; } = new(new object(), Array.Empty<DockItemDescriptor>());
 
+    /// <summary>
+    /// The authored descriptors, read without materializing. Every internal read
+    /// goes through here: materializing writes a local value, and a local value
+    /// is what would stop a style from ever supplying the set.
+    /// </summary>
+    internal IReadOnlyList<DockItemDescriptor> EffectiveDescriptors
+        => GetValue(ItemDescriptorsProperty) ?? (IReadOnlyList<DockItemDescriptor>)Array.Empty<DockItemDescriptor>();
+
+    /// <inheritdoc cref="EffectiveDescriptors"/>
+    internal IReadOnlyList<DockGroup> EffectiveGroups
+        => GetValue(GroupsProperty) ?? (IReadOnlyList<DockGroup>)Array.Empty<DockGroup>();
+
     protected override Avalonia.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
         => new DockAutomationPeer(this);
 
@@ -243,6 +282,7 @@ public class Dock : TemplatedControl
                 "winner. Splits and tabs already compose arbitrarily within one Dock.");
         }
 
+        _attached = true;
         RebuildDescriptors();
         DockRegistry.Register(this);
         EnsureLayout();
@@ -254,6 +294,7 @@ public class Dock : TemplatedControl
     {
         base.OnDetachedFromVisualTree(e);
 
+        _attached = false;
         Drag.CancelGesture();
         DockRegistry.Unregister(this);
         _floats.Dispose();
@@ -299,8 +340,44 @@ public class Dock : TemplatedControl
 
     internal void RebuildDescriptors()
     {
-        Descriptors = new DockDescriptorSet(this, ItemDescriptors);
+        Descriptors = new DockDescriptorSet(this, EffectiveDescriptors);
         Descriptors.Validate();
+    }
+
+    /// <summary>
+    /// Returns the authored collection, creating a per-instance one on first
+    /// access because the registered default is null. Written at local-value
+    /// priority, so descriptors authored inline outrank a style that also
+    /// supplies a set — the ordinary XAML rule.
+    /// </summary>
+    private T Materialize<T>(StyledProperty<T?> property, Func<T> create) where T : class
+    {
+        if (GetValue(property) is { } existing)
+        {
+            return existing;
+        }
+
+        var created = create();
+        SetValue(property, created);
+
+        return created;
+    }
+
+    /// <summary>
+    /// A replaced set redefines what this <c>Dock</c> accepts, so the resolved
+    /// set is rebuilt and items re-placed. Before attach there is nothing to
+    /// rebuild: the set is built once the Dock enters the tree, which is also
+    /// after styling has had its say.
+    /// </summary>
+    private void OnItemDescriptorsChanged()
+    {
+        if (!_attached)
+        {
+            return;
+        }
+
+        RebuildDescriptors();
+        _coordinator.Resync();
     }
 
     internal bool DescribesContent(object? content) => Descriptors.Describes(content);
