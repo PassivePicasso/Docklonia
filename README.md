@@ -127,6 +127,11 @@ drives every docking operation without a pointer.
 dotnet test
 ```
 
+## License
+
+MIT — see [LICENSE](LICENSE). The same license Avalonia itself uses, so adding
+Docklonia does not change a consuming application's licensing story.
+
 ## Known behaviour
 
 **Group position amnesia.** A group's identity lives on its pane. Closing every
