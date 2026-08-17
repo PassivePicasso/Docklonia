@@ -40,7 +40,7 @@ public class DockGuideOverlay : Control
 
     private readonly List<DockGuideButton> _paneGuides = new();
     private readonly List<DockGuideButton> _outerGuides = new();
-    private readonly Border _preview = new() { IsHitTestVisible = false, IsVisible = false };
+    private readonly Border _preview = new() { IsHitTestVisible = false, IsVisible = false, Classes = { "dock-drop-preview" } };
 
     private Rect _paneBounds;
     private double _guideSize = PreferredGuideSize;

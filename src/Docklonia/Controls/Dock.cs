@@ -448,17 +448,25 @@ public class Dock : TemplatedControl
             return;
         }
 
-        _rootPresenter = new DockPanePresenter { Owner = this, Pane = Layout?.Root };
+        _rootPresenter = new DockPanePresenter { Owner = this, Pane = PresentedRoot };
         _rootHost.Child = _rootPresenter;
 
         RefreshRoot();
     }
 
+    /// <summary>
+    /// A maximized pane temporarily covers the whole <c>Dock</c> by being the
+    /// only thing presented. Its siblings are hidden, not removed — the tree is
+    /// untouched, so nothing normalizes and restoring reveals it exactly as it
+    /// was (§5.3).
+    /// </summary>
+    private IDockNode? PresentedRoot => Layout?.MaximizedPane as IDockNode ?? Layout?.Root;
+
     private void RefreshRoot()
     {
-        if (_rootPresenter is not null && !ReferenceEquals(_rootPresenter.Pane, Layout?.Root))
+        if (_rootPresenter is not null && !ReferenceEquals(_rootPresenter.Pane, PresentedRoot))
         {
-            _rootPresenter.Pane = Layout?.Root;
+            _rootPresenter.Pane = PresentedRoot;
         }
     }
 
