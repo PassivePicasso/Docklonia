@@ -18,6 +18,7 @@
         <Button Content="Reset layout" Command="{Binding ResetLayout}" />
         <Separator />
         <Button Content="Toggle dirty (veto close)" Command="{Binding ToggleDirty}" />
+        <Button Content="Restyle" Command="{Binding ToggleRestyle}" />
       </StackPanel>
     </Border>
 
@@ -89,7 +90,7 @@
             <StackPanel Margin="10" Spacing="6">
               <TextBlock Text="Authored pane" FontWeight="SemiBold" />
               <TextBlock Text="Declared in XAML, not bound." TextWrapping="Wrap" />
-              <TextBox Watermark="Independent per duplicate" />
+              <TextBox PlaceholderText="Independent per duplicate" />
             </StackPanel>
           </dock:DockItem>
         </dock:Dock.Items>

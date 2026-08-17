@@ -5,6 +5,8 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 
+using Docklonia.Automation;
+
 namespace Docklonia.Controls;
 
 /// <summary>
@@ -50,6 +52,9 @@ public class DockSplitter : Thumb
 
     /// <summary>Raised with a signed proportion delta, already clamped by the presenter.</summary>
     internal event Action<double>? StepRequested;
+
+    protected override Avalonia.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
+        => new DockSplitterAutomationPeer(this);
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

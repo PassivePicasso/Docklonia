@@ -9,6 +9,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Docklonia.Model;
 
+using Docklonia.Automation;
+
 namespace Docklonia.Controls;
 
 /// <summary>
@@ -87,6 +89,9 @@ public class DockPaneControl : TemplatedControl
 
     /// <summary>The node currently displayed — the tab pane's selection, or the leaf itself.</summary>
     internal IDockNode? SelectedNode => TabPane?.SelectedChild ?? Node;
+
+    protected override Avalonia.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
+        => new DockPaneAutomationPeer(this);
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {

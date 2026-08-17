@@ -6,6 +6,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Docklonia.Model;
 
+using Docklonia.Automation;
+
 namespace Docklonia.Controls;
 
 /// <summary>
@@ -137,6 +139,9 @@ public class DockAutoHideButton : TemplatedControl
     internal Dock? Owner { get; set; }
 
     internal AutoHideEntry? Entry { get; set; }
+
+    protected override Avalonia.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
+        => new DockAutoHideButtonAutomationPeer(this);
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {

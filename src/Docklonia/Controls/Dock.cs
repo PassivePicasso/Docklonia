@@ -13,6 +13,8 @@ using Docklonia.Dragging;
 using Docklonia.Model;
 using Docklonia.Model.Mutations;
 
+using Docklonia.Automation;
+
 namespace Docklonia.Controls;
 
 /// <summary>
@@ -100,6 +102,7 @@ public class Dock : TemplatedControl
         Commands = new DockCommands(this);
         Drag = new DockDragController(this);
         AutoHide = new DockAutoHideSurface(this);
+        Keyboard = new DockKeyboard(this);
 
         DataTemplates.Add(AuthoredContentTemplate.Instance);
         GotFocus += OnGotFocus;
@@ -188,7 +191,13 @@ public class Dock : TemplatedControl
     /// <summary>Edge strips and the slide-out flyout for auto-hidden panes (§5.3).</summary>
     internal DockAutoHideSurface AutoHide { get; }
 
+    /// <summary>Keyboard operation of every docking gesture (§11).</summary>
+    internal DockKeyboard Keyboard { get; }
+
     internal DockDescriptorSet Descriptors { get; private set; } = new(new object(), Array.Empty<DockItemDescriptor>());
+
+    protected override Avalonia.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
+        => new DockAutomationPeer(this);
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
@@ -361,6 +370,12 @@ public class Dock : TemplatedControl
         if (e.Key == Key.Escape && Drag.IsDragging)
         {
             Drag.CancelGesture();
+            e.Handled = true;
+            return;
+        }
+
+        if (Keyboard.Handle(e))
+        {
             e.Handled = true;
         }
     }

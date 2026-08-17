@@ -6,6 +6,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Docklonia.Model;
 
+using Docklonia.Automation;
+
 namespace Docklonia.Controls;
 
 /// <summary>
@@ -73,6 +75,9 @@ public class DockTab : TemplatedControl
 
     public bool CanClose => Node is DockContent { CanClose: true } or DockTabPane;
 
+    protected override Avalonia.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
+        => new DockTabAutomationPeer(this);
+
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
         base.OnApplyTemplate(e);
@@ -137,10 +142,53 @@ public class DockTab : TemplatedControl
                 Owner.ActivateNode(Node);
                 e.Handled = true;
                 break;
+
+            // Arrow keys walk the strip in visual order, so wrapping onto
+            // another line is invisible to keyboard navigation (§11).
+            case Key.Left or Key.Up:
+                e.Handled = MoveBy(-1);
+                break;
+
+            case Key.Right or Key.Down:
+                e.Handled = MoveBy(1);
+                break;
+
+            case Key.Home:
+                e.Handled = MoveTo(0);
+                break;
+
+            case Key.End:
+                e.Handled = MoveTo(int.MaxValue);
+                break;
         }
     }
 
     internal void SetDragging(bool dragging) => PseudoClasses.Set(":dragging", dragging);
+
+    private bool MoveBy(int delta)
+    {
+        var tabs = Pane?.Tabs;
+        return tabs is not null && MoveTo(tabs.ToList().IndexOf(this) + delta);
+    }
+
+    private bool MoveTo(int index)
+    {
+        if (Pane?.Tabs is not { Count: > 0 } tabs || Owner is null)
+        {
+            return false;
+        }
+
+        var target = tabs[Math.Clamp(index, 0, tabs.Count - 1)];
+
+        if (ReferenceEquals(target, this) || target.Node is null)
+        {
+            return false;
+        }
+
+        Owner.ActivateNode(target.Node);
+        target.Focus();
+        return true;
+    }
 
     /// <summary>
     /// Set by the strip during arrange. A pseudo-class may only be applied by

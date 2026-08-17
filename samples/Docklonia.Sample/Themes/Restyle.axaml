@@ -1,0 +1,74 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dock="https://github.com/docklonia">
+
+  <!--
+    An acceptance test for §12: this restyles every Docklonia control without
+    replacing a single template, purely by overriding documented theme resource
+    keys and targeting documented pseudo-classes.
+
+    If any visual were hard-coded in a control's own rendering, or any state set
+    from code rather than expressed as a pseudo-class, this file could not
+    reach it — which is exactly what makes it a test rather than a decoration.
+  -->
+
+  <Styles.Resources>
+
+    <!-- Resource keys are public API, so overriding them is the supported route. -->
+    <SolidColorBrush x:Key="DockBackground" Color="#12131A" />
+    <SolidColorBrush x:Key="DockPaneBackground" Color="#1A1C25" />
+    <SolidColorBrush x:Key="DockPaneBorderBrush" Color="#3B2F6B" />
+    <SolidColorBrush x:Key="DockTitleBarBackground" Color="#241F3D" />
+    <SolidColorBrush x:Key="DockTitleBarActiveBackground" Color="#5B2E8C" />
+    <SolidColorBrush x:Key="DockTitleForeground" Color="#F2E9FF" />
+    <SolidColorBrush x:Key="DockTabBackground" Color="#241F3D" />
+    <SolidColorBrush x:Key="DockTabHoverBackground" Color="#3D2F66" />
+    <SolidColorBrush x:Key="DockTabSelectedBackground" Color="#1A1C25" />
+    <SolidColorBrush x:Key="DockTabActiveAccent" Color="#FF3D9E" />
+    <SolidColorBrush x:Key="DockTabForeground" Color="#F2E9FF" />
+    <SolidColorBrush x:Key="DockSplitterBrush" Color="#00000000" />
+    <SolidColorBrush x:Key="DockSplitterHoverBrush" Color="#FF3D9E" />
+    <SolidColorBrush x:Key="DockGuideBackground" Color="#241F3D" />
+    <SolidColorBrush x:Key="DockGuideBorderBrush" Color="#FF3D9E" />
+    <SolidColorBrush x:Key="DockGuideHotBackground" Color="#FF3D9E" />
+    <SolidColorBrush x:Key="DockGuideGlyphBrush" Color="#B79CFF" />
+    <SolidColorBrush x:Key="DockDropPreviewBrush" Color="#40FF3D9E" />
+    <SolidColorBrush x:Key="DockGhostBackground" Color="#F0241F3D" />
+
+    <!-- Metrics are public API too. -->
+    <CornerRadius x:Key="DockTabCornerRadius">10,10,0,0</CornerRadius>
+    <CornerRadius x:Key="DockGuideCornerRadius">14</CornerRadius>
+    <Thickness x:Key="DockTabPadding">14,7</Thickness>
+    <Thickness x:Key="DockPaneBorderThickness">2</Thickness>
+    <x:Double x:Key="DockTitleBarHeight">34</x:Double>
+    <x:Double x:Key="DockSplitterThickness">10</x:Double>
+    <x:Double x:Key="DockTabMaxWidth">300</x:Double>
+
+  </Styles.Resources>
+
+  <!--
+    Pseudo-classes are public API as well, so a restyler can reach every state
+    without subclassing anything.
+  -->
+  <Style Selector="dock|DockTab">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="2,3,2,0" />
+  </Style>
+
+  <Style Selector="dock|DockTab:selected">
+    <Setter Property="RenderTransform" Value="translateY(-1px)" />
+  </Style>
+
+  <Style Selector="dock|DockTab:dragging">
+    <Setter Property="Opacity" Value="0.35" />
+  </Style>
+
+  <Style Selector="dock|DockPaneControl:maximized">
+    <Setter Property="BorderBrush" Value="#FF3D9E" />
+  </Style>
+
+  <Style Selector="dock|DockSplitter:dragging">
+    <Setter Property="Opacity" Value="0.8" />
+  </Style>
+
+</Styles>

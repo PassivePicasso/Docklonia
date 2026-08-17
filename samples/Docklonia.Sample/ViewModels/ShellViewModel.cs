@@ -33,6 +33,7 @@ public sealed class ShellViewModel : Observable
         SaveLayout = new RelayCommand(Save);
         LoadLayout = new RelayCommand(Load);
         ResetLayout = new RelayCommand(Reset);
+        ToggleRestyle = new RelayCommand(SwapTheme);
         ToggleDirty = new RelayCommand(() =>
         {
             if (ActiveContent is CodeDocument document)
@@ -109,6 +110,44 @@ public sealed class ShellViewModel : Observable
     public ICommand ResetLayout { get; }
 
     public ICommand ToggleDirty { get; }
+
+    /// <summary>Swaps in the alternate theme — the §12 acceptance test.</summary>
+    public ICommand ToggleRestyle { get; }
+
+    private const string RestyleUri = "avares://Docklonia.Sample/Themes/Restyle.axaml";
+
+    /// <summary>
+    /// Adds or removes one Styles include. Nothing else changes: no template is
+    /// replaced and no control is subclassed, which is what makes this a test of
+    /// the styling contract rather than a decoration.
+    /// </summary>
+    private void SwapTheme()
+    {
+        var styles = Avalonia.Application.Current?.Styles;
+
+        if (styles is null)
+        {
+            return;
+        }
+
+        var existing = styles
+            .OfType<Avalonia.Markup.Xaml.Styling.StyleInclude>()
+            .FirstOrDefault(style => style.Source?.ToString() == RestyleUri);
+
+        if (existing is not null)
+        {
+            styles.Remove(existing);
+            Status = "Default theme restored.";
+            return;
+        }
+
+        styles.Add(new Avalonia.Markup.Xaml.Styling.StyleInclude(new Uri("avares://Docklonia.Sample/"))
+        {
+            Source = new Uri(RestyleUri),
+        });
+
+        Status = "Restyled — resource keys and pseudo-classes only, no templates replaced.";
+    }
 
     private void OpenDocument(string name)
     {
