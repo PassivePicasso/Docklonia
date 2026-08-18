@@ -158,8 +158,25 @@ internal sealed class DockCommands
     /// are hidden, not removed — the tree is unchanged, so nothing normalizes and
     /// restoring reveals it exactly as it was (§5.3).
     /// </summary>
+    /// <remarks>
+    /// On a float it is the window that maximizes, as with minimize. The
+    /// maximized pane is presented by the owning <c>Dock</c>, so setting it for
+    /// a floated node drew that node in the main window instead of in the
+    /// window it was floating in — the pane appeared to fly home rather than
+    /// to fill the screen.
+    /// </remarks>
     internal void ToggleMaximize(IDockNode node)
     {
+        if (DockTree.FloatOf(node) is { } floating)
+        {
+            floating.WindowState = floating.WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+
+            _dock.NotifyLayoutChanged();
+            return;
+        }
+
         Layout.MaximizedPane = ReferenceEquals(Layout.MaximizedPane, node) ? null : node;
         _dock.NotifyLayoutChanged();
     }

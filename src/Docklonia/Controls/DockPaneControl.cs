@@ -352,8 +352,18 @@ public class DockPaneControl : TemplatedControl
         // region are different acts and cannot share one affordance (§6.1).
         PseudoClasses.Set(":persistent", TabPane?.IsPersistent == true);
         PseudoClasses.Set(":floating", DockTree.FloatOf(Node) is not null);
-        PseudoClasses.Set(":maximized", Owner?.Layout?.MaximizedPane is { } maximized && ReferenceEquals(maximized, Node));
+        PseudoClasses.Set(":maximized", IsMaximized);
 
         SyncSelection();
     }
+
+    /// <summary>
+    /// Whether this pane is maximized, which means two things and shows one
+    /// glyph: a floated pane is maximized when its window is, a docked one when
+    /// the layout is presenting it alone.
+    /// </summary>
+    private bool IsMaximized
+        => DockTree.FloatOf(Node) is { } floating
+            ? floating.WindowState == WindowState.Maximized
+            : Owner?.Layout?.MaximizedPane is { } maximized && ReferenceEquals(maximized, Node);
 }
