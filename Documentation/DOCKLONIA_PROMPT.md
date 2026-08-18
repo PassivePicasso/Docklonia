@@ -693,10 +693,12 @@ This is a bespoke measure/arrange `Panel`, not a wrapped `TabControl` header.
 
 Requirements:
 
-1. **Box tabs, not minimal tabs.** Tabs are rectangles that *grow to fill*
-   the available strip width. They are not sized to their content.
+1. **Box tabs sized to their content.** Tabs are rectangles that take their
+   required width, so tabs on a line differ in width. A line packs as many
+   tabs as fit; whatever width the line leaves over is divided into equal
+   shares and added to every tab on it, so the line still fills the strip.
 2. **Multi-line wrapping driven by content fit.** When the tabs on a line
-   cannot display their full content without truncation, add another line.
+   cannot sit side by side at their required widths, add another line.
    Lines are added until every tab can render its content in full.
 3. **Even distribution.** Tabs are divided across the available lines as
    evenly as possible (e.g. 7 tabs on 3 lines → 3/2/2, not 5/1/1).
@@ -716,8 +718,9 @@ is the maximum useful subdivision, after which tabs truncate at whatever width
 the strip allows.
 
 Specify and implement the measure/arrange algorithm explicitly. State the
-line-count selection rule (the minimum line count at which every tab reaches
-its bounded required width) and the tie-breaking rule for uneven distribution.
+line-count selection rule (the minimum line count at which every line's tabs
+fit side by side at their bounded required widths) and the tie-breaking rule
+for uneven distribution.
 
 ---
 
