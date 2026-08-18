@@ -58,6 +58,10 @@ public class ControlTests
 
     private static void Settle(Window window) => Flush();
 
+    /// <summary>The panel the flyout slides over: the content area, inside the strips.</summary>
+    private static Panel Content(Window window)
+        => window.GetVisualDescendants().OfType<Panel>().Single(panel => panel.Name == Dock.OverlayPart);
+
     [AvaloniaFact]
     public void AMinimizedPaneLeavesAButtonOnAnEdgeStrip()
     {
@@ -124,10 +128,14 @@ public class ControlTests
         var flyout = window.GetVisualDescendants().OfType<DockAutoHideFlyout>().Single();
         var before = entry.Ratio;
 
-        // The proportion is measured along the axis the pane's edge lies on.
+        // The proportion is measured along the axis the pane's edge lies on,
+        // against the region the flyout covers -- the content area, which the
+        // strips are outside of.
+        var content = Content(window);
+
         var available = entry.Edge is DockEdge.Left or DockEdge.Right
-            ? dock.Bounds.Width
-            : dock.Bounds.Height;
+            ? content.Bounds.Width
+            : content.Bounds.Height;
 
         flyout.RequestExtent(available * 0.4);
 

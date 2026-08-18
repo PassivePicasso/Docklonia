@@ -15,7 +15,7 @@ namespace Docklonia.Controls;
 /// </remarks>
 internal sealed class DockAutoHideSurface
 {
-    /// <summary>Bounds on the flyout's share of the <c>Dock</c>, so it can neither vanish nor swallow the content.</summary>
+    /// <summary>Bounds on the flyout's share, so it can neither vanish nor swallow the content.</summary>
     private const double MinShare = 0.1;
     private const double MaxShare = 0.85;
 
@@ -23,6 +23,7 @@ internal sealed class DockAutoHideSurface
     private readonly Dictionary<DockEdge, DockAutoHideStrip> _strips = new();
     private readonly DockAutoHideFlyout _flyout = new() { IsVisible = false };
 
+    private Panel? _host;
     private AutoHideEntry? _open;
 
     internal DockAutoHideSurface(Dock dock)
@@ -34,7 +35,41 @@ internal sealed class DockAutoHideSurface
         _flyout.ResizeCompleted += () => _dock.NotifyLayoutChanged();
     }
 
-    internal Control Flyout => _flyout;
+    /// <summary>
+    /// Puts the flyout in the panel it slides over.
+    /// </summary>
+    /// <remarks>
+    /// The flyout is positioned against this panel rather than against the
+    /// <c>Dock</c>, because the strips are chrome outside it: sizing an edge
+    /// flyout to the whole control pushed it past the content area by the width
+    /// of the opposite strip, taking the titlebar's own buttons off the edge
+    /// with it.
+    /// </remarks>
+    internal void Host(Panel? overlay)
+    {
+        if (ReferenceEquals(_host, overlay))
+        {
+            return;
+        }
+
+        if (_host is not null)
+        {
+            _host.PropertyChanged -= OnHostPropertyChanged;
+            _host.Children.Remove(_flyout);
+        }
+
+        _host = overlay;
+
+        if (_host is not null)
+        {
+            _host.PropertyChanged += OnHostPropertyChanged;
+
+            if (!_host.Children.Contains(_flyout))
+            {
+                _host.Children.Add(_flyout);
+            }
+        }
+    }
 
     internal void Register(DockEdge edge, DockAutoHideStrip? strip)
     {
@@ -76,7 +111,19 @@ internal sealed class DockAutoHideSurface
     /// </remarks>
     private static void Realize(DockAutoHideStrip strip) => strip.ApplyTemplate();
 
-    /// <summary>Slides the pane out over the content, sized against the <c>Dock</c>.</summary>
+    /// <summary>The area the flyout slides over — the content region, not the whole <c>Dock</c>.</summary>
+    private Size Surface => _host?.Bounds.Size ?? _dock.Bounds.Size;
+
+    /// <summary>An open flyout keeps its share of a resized surface, as a split does.</summary>
+    private void OnHostPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == Visual.BoundsProperty && _open is not null)
+        {
+            Arrange(_open);
+        }
+    }
+
+    /// <summary>Slides the pane out over the content, sized against it.</summary>
     internal void Show(AutoHideEntry entry, DockAutoHideButton button)
     {
         if (ReferenceEquals(_open, entry) && _flyout.IsVisible)
@@ -110,7 +157,7 @@ internal sealed class DockAutoHideSurface
 
     /// <summary>
     /// Applies a dragged extent back onto the entry as a proportion of the
-    /// <c>Dock</c>, then re-arranges. Storing a proportion rather than pixels is
+    /// content area, then re-arranges. Storing a proportion rather than pixels is
     /// what lets the restored size survive a window resize, exactly as a split
     /// ratio does (§3.3).
     /// </summary>
@@ -121,9 +168,11 @@ internal sealed class DockAutoHideSurface
             return;
         }
 
+        var surface = Surface;
+
         var available = _open.Edge is DockEdge.Left or DockEdge.Right
-            ? _dock.Bounds.Width
-            : _dock.Bounds.Height;
+            ? surface.Width
+            : surface.Height;
 
         if (available <= 0)
         {
@@ -140,7 +189,7 @@ internal sealed class DockAutoHideSurface
     /// </summary>
     private void Arrange(AutoHideEntry entry)
     {
-        var bounds = _dock.Bounds.Size;
+        var bounds = Surface;
         var share = Math.Clamp(entry.Ratio <= 0 ? 0.25 : entry.Ratio, MinShare, MaxShare);
 
         switch (entry.Edge)

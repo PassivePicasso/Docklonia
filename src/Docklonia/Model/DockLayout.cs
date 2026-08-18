@@ -124,6 +124,19 @@ public sealed class DockLayout : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// The entry parking <paramref name="node"/>, or the ancestor of it that a
+    /// strip holds. Null when the node is docked or floating.
+    /// </summary>
+    /// <remarks>
+    /// A parked node is detached, so it has no parent link back to its entry.
+    /// The entry is found by lookup rather than recorded on the node, because a
+    /// node that knew which strip held it would be a second place the answer
+    /// lives and could disagree with this collection.
+    /// </remarks>
+    internal AutoHideEntry? AutoHideOf(IDockPane? node)
+        => node is null ? null : AutoHidden.FirstOrDefault(entry => DockTree.Contains(entry.Pane, node));
+
     internal void MarkChanged() => Changed?.Invoke(this, EventArgs.Empty);
 
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => MarkChanged();

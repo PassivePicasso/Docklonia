@@ -21,6 +21,7 @@ internal sealed class DockFloatSurfaces : IDisposable
 {
     private readonly Dock _dock;
     private readonly Dictionary<FloatPane, DockHost> _hosts = new();
+    private readonly Dictionary<FloatPane, IDockNode> _titles = new();
     private DockLayout? _layout;
 
     internal DockFloatSurfaces(Dock dock)
@@ -74,6 +75,7 @@ internal sealed class DockFloatSurfaces : IDisposable
         var host = DockHost.Create(_dock, hitTestable: true);
 
         host.Content = new DockPanePresenter { Owner = _dock, Pane = pane.Child };
+        host.Title = pane.Child.Title;
         host.Position = pane.Position;
         host.Size = pane.Size;
         host.WindowState = pane.WindowState;
@@ -84,6 +86,7 @@ internal sealed class DockFloatSurfaces : IDisposable
         host.Closed += (_, _) => OnHostClosed(pane);
 
         pane.PropertyChanged += OnPanePropertyChanged;
+        Watch(pane);
 
         _hosts[pane] = host;
         host.Show();
@@ -94,6 +97,7 @@ internal sealed class DockFloatSurfaces : IDisposable
         if (_hosts.Remove(pane, out var host))
         {
             pane.PropertyChanged -= OnPanePropertyChanged;
+            Unwatch(pane);
             host.Dispose();
         }
     }
@@ -102,6 +106,7 @@ internal sealed class DockFloatSurfaces : IDisposable
     {
         _hosts.Remove(pane);
         pane.PropertyChanged -= OnPanePropertyChanged;
+        Unwatch(pane);
         _layout?.Floats.Remove(pane);
     }
 
@@ -116,6 +121,8 @@ internal sealed class DockFloatSurfaces : IDisposable
         {
             case nameof(FloatPane.Child):
                 host.Content = new DockPanePresenter { Owner = _dock, Pane = pane.Child };
+                Watch(pane);
+                host.Title = pane.Child.Title;
                 break;
 
             case nameof(FloatPane.WindowState):
@@ -132,11 +139,61 @@ internal sealed class DockFloatSurfaces : IDisposable
         }
     }
 
+    /// <summary>
+    /// Follows the child's title, so the shell's own label for the window keeps
+    /// naming what is in it. The watched node is recorded because a float can
+    /// be given a new child, and the old one is gone by the time that is
+    /// announced.
+    /// </summary>
+    private void Watch(FloatPane pane)
+    {
+        Unwatch(pane);
+
+        _titles[pane] = pane.Child;
+        pane.Child.PropertyChanged += OnChildTitleChanged;
+    }
+
+    private void Unwatch(FloatPane pane)
+    {
+        if (_titles.Remove(pane, out var child))
+        {
+            child.PropertyChanged -= OnChildTitleChanged;
+        }
+    }
+
+    private void OnChildTitleChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not nameof(IDockPane.Title) and not null)
+        {
+            return;
+        }
+
+        foreach (var (pane, host) in _hosts)
+        {
+            if (ReferenceEquals(pane.Child, sender))
+            {
+                host.Title = pane.Child.Title;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Geometry is read back only from a normal window. A minimized or
+    /// maximized one reports the box it is showing rather than the one it will
+    /// return to, so pulling then would overwrite the restore geometry with the
+    /// screen — or, minimized on Windows, with a position off it entirely.
+    /// </summary>
     private void PullGeometry(FloatPane pane, DockHost host)
     {
+        pane.WindowState = host.WindowState;
+
+        if (host.WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
         pane.Position = host.Position;
         pane.Size = host.Size;
-        pane.WindowState = host.WindowState;
 
         // Moving or resizing is continuous; the write-back happens once, when
         // the gesture completes (§9.2).

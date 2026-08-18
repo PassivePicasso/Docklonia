@@ -24,24 +24,25 @@ namespace Docklonia.Controls;
 ///
 /// <para><b>Template parts.</b> <c>PART_TabStrip</c> (required — hosts the
 /// generated tabs), <c>PART_ContentHost</c> (required), <c>PART_TitleBar</c>,
-/// <c>PART_MenuButton</c>, <c>PART_MinimizeButton</c>,
+/// <c>PART_MenuButton</c>, <c>PART_PinButton</c>, <c>PART_MinimizeButton</c>,
 /// <c>PART_MaximizeButton</c>, <c>PART_CloseButton</c> (all optional; each
 /// absent part simply removes that affordance, and every operation stays
 /// reachable from the pane menu and the keyboard).</para>
 ///
 /// <para><b>Pseudo-classes.</b> <c>:active</c>, <c>:floating</c>,
 /// <c>:maximized</c>, <c>:drop-target</c>, <c>:single-tab</c>,
-/// <c>:persistent</c>.</para>
+/// <c>:persistent</c>, <c>:auto-hidden</c>.</para>
 /// </remarks>
 [TemplatePart(TabStripPart, typeof(Panel))]
 [TemplatePart(ContentHostPart, typeof(ContentPresenter))]
-[PseudoClasses(":active", ":floating", ":maximized", ":drop-target", ":single-tab", ":persistent")]
+[PseudoClasses(":active", ":floating", ":maximized", ":drop-target", ":single-tab", ":persistent", ":auto-hidden")]
 public class DockPaneControl : TemplatedControl
 {
     public const string TabStripPart = "PART_TabStrip";
     public const string ContentHostPart = "PART_ContentHost";
     public const string TitleBarPart = "PART_TitleBar";
     public const string MenuButtonPart = "PART_MenuButton";
+    public const string PinButtonPart = "PART_PinButton";
     public const string MinimizeButtonPart = "PART_MinimizeButton";
     public const string MaximizeButtonPart = "PART_MaximizeButton";
     public const string CloseButtonPart = "PART_CloseButton";
@@ -57,6 +58,7 @@ public class DockPaneControl : TemplatedControl
     private ContentPresenter? _contentHost;
     private Control? _titleBar;
     private Button? _menuButton;
+    private Button? _pinButton;
     private Button? _minimizeButton;
     private Button? _maximizeButton;
     private Button? _closeButton;
@@ -109,6 +111,7 @@ public class DockPaneControl : TemplatedControl
         _contentHost = e.NameScope.Find<ContentPresenter>(ContentHostPart);
         _titleBar = e.NameScope.Find<Control>(TitleBarPart);
         _menuButton = e.NameScope.Find<Button>(MenuButtonPart);
+        _pinButton = e.NameScope.Find<Button>(PinButtonPart);
         _minimizeButton = e.NameScope.Find<Button>(MinimizeButtonPart);
         _maximizeButton = e.NameScope.Find<Button>(MaximizeButtonPart);
         _closeButton = e.NameScope.Find<Button>(CloseButtonPart);
@@ -255,6 +258,7 @@ public class DockPaneControl : TemplatedControl
         }
 
         Wire(_menuButton, OnMenuClick);
+        Wire(_pinButton, OnPinClick);
         Wire(_minimizeButton, OnMinimizeClick);
         Wire(_maximizeButton, OnMaximizeClick);
         Wire(_closeButton, OnCloseClick);
@@ -268,6 +272,7 @@ public class DockPaneControl : TemplatedControl
         }
 
         Unwire(_menuButton, OnMenuClick);
+        Unwire(_pinButton, OnPinClick);
         Unwire(_minimizeButton, OnMinimizeClick);
         Unwire(_maximizeButton, OnMaximizeClick);
         Unwire(_closeButton, OnCloseClick);
@@ -313,6 +318,21 @@ public class DockPaneControl : TemplatedControl
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Re-pins a pane the user is looking at in its flyout. Minimize parks it
+    /// from the titlebar, so unparking belongs on the titlebar too rather than
+    /// only on the button the pane left behind (§5.3).
+    /// </summary>
+    private void OnPinClick(object? sender, RoutedEventArgs e)
+    {
+        if (Parked is { } entry)
+        {
+            Owner?.Commands.Restore(entry);
+        }
+
+        e.Handled = true;
+    }
+
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)
     {
         if (Node is not null)
@@ -352,10 +372,14 @@ public class DockPaneControl : TemplatedControl
         // region are different acts and cannot share one affordance (§6.1).
         PseudoClasses.Set(":persistent", TabPane?.IsPersistent == true);
         PseudoClasses.Set(":floating", DockTree.FloatOf(Node) is not null);
+        PseudoClasses.Set(":auto-hidden", Parked is not null);
         PseudoClasses.Set(":maximized", IsMaximized);
 
         SyncSelection();
     }
+
+    /// <summary>The strip entry holding this pane, or null while it is docked or floating.</summary>
+    private Model.AutoHideEntry? Parked => Owner?.Layout?.AutoHideOf(Node);
 
     /// <summary>
     /// Whether this pane is maximized, which means two things and shows one

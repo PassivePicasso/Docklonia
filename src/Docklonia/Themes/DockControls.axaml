@@ -63,6 +63,11 @@
                            Margin="6,0"
                            TextTrimming="CharacterEllipsis" />
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
+                  <!-- Only meaningful while the pane is parked; see :auto-hidden. -->
+                  <Button Name="PART_PinButton" Content="&#x1F4CC;"
+                          IsVisible="False"
+                          ToolTip.Tip="Re-pin into the layout"
+                          Theme="{StaticResource DockChromeButton}" />
                   <Button Name="PART_MinimizeButton" Content="&#x2500;"
                           ToolTip.Tip="Auto-hide" Theme="{StaticResource DockChromeButton}" />
                   <Button Name="PART_MaximizeButton" Content="&#x25A1;"
@@ -115,6 +120,18 @@
     <!-- Wording follows the same pseudo-class the visuals do. -->
     <Style Selector="^:maximized /template/ Button#PART_MaximizeButton">
       <Setter Property="ToolTip.Tip" Value="Restore" />
+    </Style>
+
+    <!--
+      A parked pane is looked at in its flyout, so re-pinning belongs on the
+      titlebar the user is already looking at. Minimize goes with it: the pane
+      is already minimized, so the button would do nothing.
+    -->
+    <Style Selector="^:auto-hidden /template/ Button#PART_PinButton">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:auto-hidden /template/ Button#PART_MinimizeButton">
+      <Setter Property="IsVisible" Value="False" />
     </Style>
   </ControlTheme>
 
@@ -348,20 +365,48 @@
                 Background="{TemplateBinding Background}"
                 CornerRadius="2"
                 Padding="6,3">
-          <StackPanel Orientation="Horizontal" Spacing="4">
-            <TextBlock Text="{TemplateBinding Title}"
-                       Foreground="{TemplateBinding Foreground}"
-                       VerticalAlignment="Center" />
-            <Button Name="PART_PinButton" Content="&#x1F4CC;"
-                    ToolTip.Tip="Re-pin into the layout"
-                    Width="16" Height="16"
-                    Theme="{StaticResource DockChromeButton}" />
-          </StackPanel>
+          <!--
+            A side strip runs down the window, so its buttons must read down it
+            too: the rotation is a layout transform rather than a render one, so
+            the strip measures the turned label and stays as narrow as the text
+            is tall.
+          -->
+          <LayoutTransformControl Name="PART_Rotation">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock Text="{TemplateBinding Title}"
+                         Foreground="{TemplateBinding Foreground}"
+                         VerticalAlignment="Center" />
+              <Button Name="PART_PinButton" Content="&#x1F4CC;"
+                      ToolTip.Tip="Re-pin into the layout"
+                      Width="16" Height="16"
+                      Theme="{StaticResource DockChromeButton}" />
+            </StackPanel>
+          </LayoutTransformControl>
         </Border>
       </ControlTemplate>
     </Setter>
     <Style Selector="^ /template/ Border#PART_Root">
       <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!-- Left reads bottom-to-top and right top-to-bottom, so both turn inward. -->
+    <Style Selector="^:left /template/ LayoutTransformControl#PART_Rotation">
+      <Setter Property="LayoutTransform">
+        <RotateTransform Angle="-90" />
+      </Setter>
+    </Style>
+    <Style Selector="^:right /template/ LayoutTransformControl#PART_Rotation">
+      <Setter Property="LayoutTransform">
+        <RotateTransform Angle="90" />
+      </Setter>
+    </Style>
+
+    <!-- The padding turns with the label it surrounds. -->
+    <Style Selector="^:left /template/ Border#PART_Root">
+      <Setter Property="Padding" Value="3,6" />
+    </Style>
+    <Style Selector="^:right /template/ Border#PART_Root">
+      <Setter Property="Padding" Value="3,6" />
     </Style>
     <Style Selector="^:pointerover /template/ Border#PART_Root">
       <Setter Property="Background" Value="{DynamicResource DockTabHoverBackground}" />

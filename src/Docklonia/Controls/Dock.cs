@@ -248,13 +248,7 @@ public class Dock : TemplatedControl
         _rootHost = e.NameScope.Find<Decorator>(RootPart);
         _overlayHost = e.NameScope.Find<Panel>(OverlayPart);
 
-        if (_overlayHost is not null)
-        {
-            if (!_overlayHost.Children.Contains(AutoHide.Flyout))
-            {
-                _overlayHost.Children.Add(AutoHide.Flyout);
-            }
-        }
+        AutoHide.Host(_overlayHost);
 
         // The guides are not hosted here: they move into the overlay layer of
         // whichever TopLevel the drop target lives in, so a floating target

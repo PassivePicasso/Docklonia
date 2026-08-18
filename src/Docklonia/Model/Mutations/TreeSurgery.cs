@@ -110,10 +110,30 @@ internal static class TreeSurgery
                 break;
 
             case null:
+                Unpark(layout, node);
                 break;
 
             default:
                 throw new InvalidOperationException("Node is not attached to this layout.");
+        }
+    }
+
+    /// <summary>
+    /// Retires the strip entry parking a node, if one holds it.
+    /// </summary>
+    /// <remarks>
+    /// A parked node has no parent, so the entry is the only thing recording
+    /// that a strip still owns it. Without this, moving one out of its flyout
+    /// leaves the node in two places at once: wherever it was dropped, and
+    /// still behind its button — which then outlives the pane it names.
+    /// </remarks>
+    private static void Unpark(DockLayout layout, IDockNode node)
+    {
+        var parked = layout.AutoHidden.FirstOrDefault(entry => ReferenceEquals(entry.Pane, node));
+
+        if (parked is not null)
+        {
+            layout.AutoHidden.Remove(parked);
         }
     }
 }

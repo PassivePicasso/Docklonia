@@ -27,6 +27,9 @@ namespace Docklonia.Hosting;
 /// </remarks>
 internal abstract class DockHost : IDisposable
 {
+    /// <summary>What the OS shell calls this surface. Unused where a surface has no shell presence.</summary>
+    internal abstract string? Title { get; set; }
+
     internal abstract Visual? RootVisual { get; }
 
     internal abstract TopLevel? TopLevel { get; }

@@ -24,7 +24,11 @@ internal sealed class WindowDockHost : DockHost
                 ? WindowDecorations.BorderOnly
                 : WindowDecorations.None,
             ExtendClientAreaToDecorationsHint = hitTestable,
-            ShowInTaskbar = false,
+            // A float is a window of the application, so the OS shell should
+            // list it: without a taskbar button, minimizing one sends it
+            // nowhere the user can reach it from (§5.2).
+            ShowInTaskbar = hitTestable,
+            Icon = owner.Icon,
             Background = null,
             TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent },
             SizeToContent = SizeToContent.Manual,
@@ -35,9 +39,16 @@ internal sealed class WindowDockHost : DockHost
 
         _window.PositionChanged += (_, _) => RaiseGeometryChanged();
         _window.Resized += (_, _) => RaiseGeometryChanged();
+        _window.PropertyChanged += OnWindowPropertyChanged;
         _window.Closed += (_, _) => RaiseClosed();
 
         _window.Show(owner);
+    }
+
+    internal override string? Title
+    {
+        get => _window.Title;
+        set => _window.Title = value;
     }
 
     internal override Visual? RootVisual => _window;
@@ -86,4 +97,16 @@ internal sealed class WindowDockHost : DockHost
     }
 
     public override void Dispose() => Close();
+
+    /// <summary>
+    /// Minimizing and restoring from the taskbar are the user moving the
+    /// window, so they reach the model by the same route a drag does.
+    /// </summary>
+    private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == Window.WindowStateProperty)
+        {
+            RaiseGeometryChanged();
+        }
+    }
 }

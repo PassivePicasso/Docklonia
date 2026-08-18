@@ -37,6 +37,9 @@ internal sealed class OverlayDockHost : DockHost
         ApplyPosition();
     }
 
+    /// <summary>An overlay has no shell presence, so the title is carried and not shown.</summary>
+    internal override string? Title { get; set; }
+
     internal override Visual? RootVisual => _root;
 
     internal override TopLevel? TopLevel => TopLevel.GetTopLevel(_root);
