@@ -1,0 +1,29 @@
+<Project>
+
+  <!--
+    A version on the feed is a version something may already have restored.
+
+    NuGet caches by id and version: once `Cogs 0.1.0` is in `~/.nuget/packages`,
+    every later restore of `0.1.0` takes that copy and never looks at the feed
+    again. So packing changed code over a version that is already there makes
+    what a consumer compiles against and what the source says disagree, on some
+    machines and not others, with nothing anywhere saying so.
+
+    Refused rather than remembered. The fix is the thing that was skipped: bump
+    the version. `-p:AllowRepack=true` is for replacing a package nothing has
+    restored yet, and is a deliberate act rather than a default.
+  -->
+  <Target Name="RefuseToPackOverAPublishedVersion"
+          BeforeTargets="GenerateNuspec"
+          Condition="'$(AllowRepack)' != 'true' AND '$(PackageOutputPath)' != ''">
+
+    <PropertyGroup>
+      <PublishedPackage>$([MSBuild]::EnsureTrailingSlash('$(PackageOutputPath)'))$(PackageId).$(PackageVersion).nupkg</PublishedPackage>
+    </PropertyGroup>
+
+    <Error Condition="Exists('$(PublishedPackage)')"
+           Code="PACK001"
+           Text="$(PackageId) $(PackageVersion) is already on the feed. Bump the version: a package repacked under a version something has restored is invisible to it, because NuGet caches by id and version and never looks again. ($(PublishedPackage))" />
+  </Target>
+
+</Project>
