@@ -73,6 +73,13 @@ public class DockAutoHideStrip : TemplatedControl
                 : new[] { (Entry: entry, Title: entry.Pane.Title ?? "Pane") })
             .ToArray();
 
+        // A button that holds the pointer's focus is about to be discarded; the
+        // rebuild must not strand that focus on a dead control (§5.3).
+        var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+        var focusEntry = focused is DockAutoHideButton focusedButton && _buttons.Contains(focusedButton)
+            ? focusedButton.Entry
+            : null;
+
         _items.Children.Clear();
         _buttons.Clear();
 
@@ -81,6 +88,12 @@ public class DockAutoHideStrip : TemplatedControl
             var button = new DockAutoHideButton { Owner = Owner, Entry = entry, Title = title, Edge = Edge };
             _buttons.Add(button);
             _items.Children.Add(button);
+        }
+
+        if (focusEntry is not null)
+        {
+            _buttons.FirstOrDefault(button => ReferenceEquals(button.Entry, focusEntry))
+                ?.Focus(NavigationMethod.Pointer, KeyModifiers.None);
         }
 
         IsVisible = _buttons.Count > 0;

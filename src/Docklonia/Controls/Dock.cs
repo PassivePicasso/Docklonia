@@ -282,6 +282,10 @@ public class Dock : TemplatedControl
         EnsureLayout();
         _coordinator.Resync();
         _floats.Attach(Layout);
+
+        // The flyout may have been open when this dock left a window; re-attach
+        // its dismissal guard to whatever window it is in now (§5.3).
+        AutoHide.RefreshFocusGuard();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

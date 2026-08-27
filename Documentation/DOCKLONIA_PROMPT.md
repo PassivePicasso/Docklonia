@@ -840,7 +840,7 @@ enough information to put it back.
 | Edge selection | Nearest `Dock` edge to the pane's position at the moment it was minimized |
 | Restore target | **Must be persisted.** Unlike group position (§3.9), restoring to the original location is the entire point of auto-hide, so amnesia is not acceptable here |
 | Flyout | Slides over content as an overlay; does not resize the layout or displace other panes |
-| Dismissal | Closes when keyboard focus moves to something outside the flyout's subtree — focus moving between its own children is an interaction with the panel, not a dismissal of it — or when the pane is re-pinned back into the tree |
+| Dismissal | Closes when the user's attention leaves the panel: focus that lands on a destination outside the flyout's subtree, a left press on something outside it, or re-pinning the pane back into the tree. Focus moving between the flyout's own children, a press on its own chrome, and focus that is only cleared without moving anywhere (a rebuild of the panel's content tearing down what held it) are interactions with the panel, not dismissals of it. The strip button of the entry being shown resolves its own gesture (toggle, or switch to its entry) rather than dismissing it |
 | Serialization | Auto-hidden entries and their restore targets persist with the layout (§8) |
 | Floating panes | Minimize on a `FloatPane` is a real window minimize (§5.1), never auto-hide |
 

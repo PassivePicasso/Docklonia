@@ -12,10 +12,13 @@ namespace Docklonia.Controls;
 /// <remarks>
 /// The flyout is an overlay: it slides over the content and never resizes the
 /// layout or displaces other panes, which is what distinguishes auto-hide from
-/// collapsing a pane in place. It is dismissed when keyboard focus leaves the
-/// flyout's subtree, or by re-pinning, and its size is stored on the entry as
-/// a proportion so it persists. Focus moving between the flyout's own children
-/// is an interaction with the panel, not a dismissal of it (§5.3).
+/// collapsing a pane in place. It is dismissed by re-pinning, or when the
+/// user's attention leaves the panel: focus that lands somewhere outside the
+/// flyout's subtree, or a left press on something outside it. Focus moving
+/// between the flyout's own children is an interaction with the panel, not a
+/// dismissal of it; focus that is only cleared (a rebuild of the panel's own
+/// content tearing down what held it, for example) has not moved the user's
+/// attention anywhere, and does not dismiss either (§5.3).
 /// </remarks>
 internal sealed class DockAutoHideSurface
 {
@@ -29,6 +32,7 @@ internal sealed class DockAutoHideSurface
 
     private Panel? _host;
     private AutoHideEntry? _open;
+    private TopLevel? _guardWindow;
 
     internal DockAutoHideSurface(Dock dock)
     {
@@ -144,6 +148,7 @@ internal sealed class DockAutoHideSurface
 
         Arrange(entry);
         button.SetOpen(true);
+        SetFocusGuard(true);
 
         // The flyout is the focus anchor for its own slide-out, so a dismissal
         // by focus loss has something to lose focus from (§5.3).
@@ -152,6 +157,8 @@ internal sealed class DockAutoHideSurface
 
     internal void Dismiss()
     {
+        SetFocusGuard(false);
+
         _open = null;
         _flyout.IsVisible = false;
         _flyout.PaneContent = null;
@@ -160,6 +167,110 @@ internal sealed class DockAutoHideSurface
         {
             strip.Rebuild();
         }
+    }
+
+    /// <summary>
+    /// Re-attaches the dismissal guard to the flyout's window, for a dock that
+    /// moved windows while the flyout was open.
+    /// </summary>
+    internal void RefreshFocusGuard() => SetFocusGuard(_open is not null);
+
+    /// <summary>
+    /// While the flyout is open, watches its window for the user's attention
+    /// leaving the panel: focus that lands outside the flyout's subtree, or a
+    /// left press on something outside it, dismisses it (§5.3).
+    /// </summary>
+    /// <remarks>
+    /// The flyout's own <c>LostFocus</c> cannot see this, because focus often
+    /// is not on the flyout when it is dismissed: it is on a child the content
+    /// rebuild just tore down, or on nothing at all. Watched from the window,
+    /// every destination focus can land on in the panel's top level is seen.
+    /// </remarks>
+    private void SetFocusGuard(bool on)
+    {
+        var window = on ? TopLevel.GetTopLevel(_flyout) : null;
+
+        if (ReferenceEquals(window, _guardWindow))
+        {
+            return;
+        }
+
+        if (_guardWindow is { } old)
+        {
+            old.RemoveHandler(InputElement.GotFocusEvent, OnWindowGotFocus);
+            old.RemoveHandler(InputElement.PointerPressedEvent, OnWindowPointerPressed);
+        }
+
+        _guardWindow = window;
+
+        if (window is not null)
+        {
+            window.AddHandler(InputElement.GotFocusEvent, OnWindowGotFocus, handledEventsToo: true);
+            window.AddHandler(InputElement.PointerPressedEvent, OnWindowPointerPressed, handledEventsToo: true);
+        }
+    }
+
+    private void OnWindowGotFocus(object? sender, FocusChangedEventArgs e)
+    {
+        if (_open is null)
+        {
+            return;
+        }
+
+        if (e.NewFocusedElement is null)
+        {
+            // Focus was cleared rather than moved; nothing has been interacted
+            // with, so there is nothing to dismiss for.
+            return;
+        }
+
+        if (IsInFlyout(e.NewFocusedElement as Visual) ||
+            IsButtonForOpenEntry(e.NewFocusedElement as Visual))
+        {
+            return;
+        }
+
+        Dismiss();
+    }
+
+    private void OnWindowPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_open is null)
+        {
+            return;
+        }
+
+        if (!e.GetCurrentPoint(_flyout).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        var source = e.Source as Visual;
+
+        if (IsInFlyout(source) || IsButtonForOpenEntry(source))
+        {
+            return;
+        }
+
+        Dismiss();
+    }
+
+    /// <summary>
+    /// Whether the element is the strip button of the entry the flyout is
+    /// showing. A press or focus landing on that button is the button's own
+    /// gesture (toggle, or switch to its entry), which it resolves on its own.
+    /// </summary>
+    private bool IsButtonForOpenEntry(Visual? candidate)
+    {
+        for (var visual = candidate; visual is not null; visual = visual.GetVisualParent())
+        {
+            if (visual is DockAutoHideButton { Entry: { } entry } && ReferenceEquals(entry, _open))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -186,7 +297,12 @@ internal sealed class DockAutoHideSurface
     /// <c>LostFocus</c> is a bubbling routed event, so this handler also sees
     /// focus movement between the flyout's own children. Such a move is the
     /// user interacting with the panel, not a dismissal of it: only focus that
-    /// lands outside the flyout's subtree closes it (§5.3).
+    /// lands outside the flyout's subtree closes it (§5.3). Focus that is
+    /// merely cleared (a rebuild of the panel's content tearing down what held
+    /// it) is answered by the window guard, which dismisses only when focus
+    /// lands somewhere, not when it vanishes. Focus landing on the strip
+    /// button of the entry being shown is the button's own gesture (toggle),
+    /// which it resolves before the next event.
     /// </remarks>
     private void OnFlyoutLostFocus(object? sender, FocusChangedEventArgs e)
     {
@@ -195,7 +311,13 @@ internal sealed class DockAutoHideSurface
             return;
         }
 
-        if (IsInFlyout(e.NewFocusedElement as Visual))
+        if (e.NewFocusedElement is null)
+        {
+            return;
+        }
+
+        if (IsInFlyout(e.NewFocusedElement as Visual) ||
+            IsButtonForOpenEntry(e.NewFocusedElement as Visual))
         {
             return;
         }
