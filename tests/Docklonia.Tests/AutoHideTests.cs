@@ -255,4 +255,80 @@ public class AutoHideTests
         button.ApplyTemplate();
         return button.GetVisualDescendants().OfType<LayoutTransformControl>().Single();
     }
+
+    private static DockContent Leaf(string key) => new(key) { ContentKey = key, Title = key };
+
+    /// <summary>
+    /// The restore aims at the recorded sibling, which is itself parked: a node
+    /// that is in no tree, under no root. Resolving the anchor against every
+    /// surface found it anyway, and the re-dock threw "Node is not attached to
+    /// this layout" on the pin click — unhandled on the dispatcher, the process
+    /// gone. A closed sibling is absent from every list and already took the
+    /// fallback; a parked one must be treated the same.
+    /// </summary>
+    [Fact]
+    public void PinningAPaneWhoseAnchorIsItselfParkedFallsBackToTheEdge()
+    {
+        var a = Leaf("a");
+        var b = Leaf("b");
+        var c = Leaf("c");
+
+        // Root = split( c, split( a, b ) ): a's anchor is b, b's is c.
+        var layout = new DockLayout
+        {
+            Root = new DockSplitPane(
+                Avalonia.Layout.Orientation.Horizontal,
+                c,
+                new DockSplitPane(Avalonia.Layout.Orientation.Horizontal, a, b))
+        };
+
+        var entryA = AutoHideOperations.Hide(layout, a, DockEdge.Left);
+
+        // The inner split collapses onto b, making b the surviving half of the
+        // root split; parking it leaves c alone as root.
+        var entryB = AutoHideOperations.Hide(layout, b, DockEdge.Right);
+        Assert.Same(c, layout.Root);
+
+        // Used to throw InvalidOperationException("Node is not attached to this layout.").
+        AutoHideOperations.Restore(layout, entryA, Array.Empty<DockGroup>());
+
+        Assert.DoesNotContain(entryA, layout.AutoHidden);
+        Assert.Contains(entryB, layout.AutoHidden);
+
+        // No live anchor, so a takes the edge fallback against the surviving root.
+        var root = Assert.IsType<DockSplitPane>(layout.Root);
+        Assert.Equal(new IDockNode[] { a, c }, root.Children);
+    }
+
+    /// <summary>
+    /// The same accident through the grouped path: the pane is a tab pane with a
+    /// group, so its fallback is the group's seed rather than the edge it parked on.
+    /// </summary>
+    [Fact]
+    public void PinningAGroupedPaneWhoseAnchorIsItselfParkedUsesTheGroupsSeed()
+    {
+        var a = new DockTabPane(Leaf("a")) { Group = "Tools" };
+        var b = new DockTabPane(Leaf("b")) { Group = "Tools" };
+        var c = new DockTabPane(Leaf("c"));
+
+        var layout = new DockLayout
+        {
+            Root = new DockSplitPane(
+                Avalonia.Layout.Orientation.Horizontal,
+                c,
+                new DockSplitPane(Avalonia.Layout.Orientation.Horizontal, a, b))
+        };
+
+        var groups = new[] { new DockGroup { Name = "Tools", Seed = DockDirection.Right, SeedSize = 0.2 } };
+
+        var entryA = AutoHideOperations.Hide(layout, a, DockEdge.Left);
+        AutoHideOperations.Hide(layout, b, DockEdge.Right);
+        Assert.Same(c, layout.Root);
+
+        AutoHideOperations.Restore(layout, entryA, groups);
+
+        // Seeded Right of the surviving root, so c keeps the lead.
+        var root = Assert.IsType<DockSplitPane>(layout.Root);
+        Assert.Equal(new IDockNode[] { c, a }, root.Children);
+    }
 }

@@ -105,8 +105,12 @@ public sealed class DockLayout : INotifyPropertyChanged
     public static DockLayout FromJson(string json, LayoutJsonOptions? options = null)
         => LayoutSerializer.Deserialize(json, options);
 
-    /// <summary>Every node reachable from this layout, across every surface.</summary>
-    public IEnumerable<IDockPane> AllPanes()
+    /// <summary>
+    /// Every node in the live surfaces: the main tree and the floating windows.
+    /// Parked entries are deliberately absent — a parked node is in no tree and
+    /// has no slot a mutation can attach to, so nothing may target it.
+    /// </summary>
+    public IEnumerable<IDockPane> LivePanes()
     {
         foreach (var pane in DockTree.SelfAndDescendants(Root))
         {
@@ -117,12 +121,11 @@ public sealed class DockLayout : INotifyPropertyChanged
         {
             yield return pane;
         }
-
-        foreach (var pane in AutoHidden.SelectMany(entry => DockTree.SelfAndDescendants(entry.Pane)))
-        {
-            yield return pane;
-        }
     }
+
+    /// <summary>Every node reachable from this layout, across every surface — live and parked.</summary>
+    public IEnumerable<IDockPane> AllPanes()
+        => LivePanes().Concat(AutoHidden.SelectMany(entry => DockTree.SelfAndDescendants(entry.Pane)));
 
     /// <summary>
     /// The entry parking <paramref name="node"/>, or the ancestor of it that a

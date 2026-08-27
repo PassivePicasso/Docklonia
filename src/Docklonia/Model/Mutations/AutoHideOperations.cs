@@ -14,7 +14,10 @@ namespace Docklonia.Model.Mutations;
 /// <para>The target cannot be a path, because unrelated docking operations
 /// invalidate paths while a pane sits hidden. It is a <b>relative anchor</b>: a
 /// surviving sibling's id plus the direction the pane sat in relative to it,
-/// falling back to the placement seed when that sibling is gone too.</para>
+/// falling back to the placement seed when that sibling is gone too. Gone means
+/// <i>not live</i> — a sibling that is itself parked is as un-dockable as one
+/// that was closed, because a parked node sits in no tree and offers no slot,
+/// and resolving the anchor against every surface would hand one back.</para>
 /// </remarks>
 internal static class AutoHideOperations
 {
@@ -42,8 +45,8 @@ internal static class AutoHideOperations
 
     /// <summary>
     /// Re-pins the pane. The anchor is resolved against the live tree; when it
-    /// no longer exists the pane falls back to its group's seed, and failing
-    /// that to the root.
+    /// no longer exists — closed, or parked itself while this pane waited — the
+    /// pane falls back to its group's seed, and failing that to the root.
     /// </summary>
     internal static void Restore(DockLayout layout, AutoHideEntry entry, IReadOnlyList<DockGroup> groups)
     {
@@ -54,7 +57,7 @@ internal static class AutoHideOperations
 
         var anchor = entry.AnchorId is null
             ? null
-            : layout.AllPanes().OfType<IDockNode>().FirstOrDefault(pane => pane.Id == entry.AnchorId);
+            : layout.LivePanes().OfType<IDockNode>().FirstOrDefault(pane => pane.Id == entry.AnchorId);
 
         if (anchor is not null)
         {
