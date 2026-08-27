@@ -12,6 +12,12 @@ namespace Docklonia.Controls;
 /// edge so the user can resize it.
 /// </summary>
 /// <remarks>
+/// <para>The flyout is the focus anchor for its slide-out: it is focusable, and
+/// while it is open, keyboard focus lives on it or on a control inside it. Only
+/// focus that leaves the flyout's subtree dismisses it; focus moving between
+/// its own children is an interaction with the panel, not a dismissal of it
+/// (§5.3).</para>
+///
 /// <para>The grip is a <see cref="DockSplitter"/> — the same control that resizes
 /// a real split. It already positions absolutely from the pointer, clamps at a
 /// floor, and is keyboard-operable, so reusing it keeps one resize behaviour
@@ -42,6 +48,11 @@ public class DockAutoHideFlyout : TemplatedControl
     static DockAutoHideFlyout()
     {
         EdgeProperty.Changed.AddClassHandler<DockAutoHideFlyout>((flyout, _) => flyout.OnEdgeChanged());
+
+        // The focus anchor: a pointer press on the flyout's own chrome resolves
+        // here rather than escaping to the window, so focus stays inside the
+        // panel while it is open (§5.3).
+        FocusableProperty.OverrideDefaultValue<DockAutoHideFlyout>(true);
     }
 
     public DockEdge Edge

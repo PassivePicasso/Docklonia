@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.VisualTree;
 using Docklonia.Model;
 
 namespace Docklonia.Controls;
@@ -10,8 +12,10 @@ namespace Docklonia.Controls;
 /// <remarks>
 /// The flyout is an overlay: it slides over the content and never resizes the
 /// layout or displaces other panes, which is what distinguishes auto-hide from
-/// collapsing a pane in place. It is dismissed by losing focus or by re-pinning,
-/// and its size is stored on the entry as a proportion so it persists.
+/// collapsing a pane in place. It is dismissed when keyboard focus leaves the
+/// flyout's subtree, or by re-pinning, and its size is stored on the entry as
+/// a proportion so it persists. Focus moving between the flyout's own children
+/// is an interaction with the panel, not a dismissal of it (§5.3).
 /// </remarks>
 internal sealed class DockAutoHideSurface
 {
@@ -30,7 +34,7 @@ internal sealed class DockAutoHideSurface
     {
         _dock = dock;
 
-        _flyout.LostFocus += (_, _) => Dismiss();
+        _flyout.LostFocus += OnFlyoutLostFocus;
         _flyout.ExtentRequested += OnExtentRequested;
         _flyout.ResizeCompleted += () => _dock.NotifyLayoutChanged();
     }
@@ -140,6 +144,9 @@ internal sealed class DockAutoHideSurface
 
         Arrange(entry);
         button.SetOpen(true);
+
+        // The flyout is the focus anchor for its own slide-out, so a dismissal
+        // by focus loss has something to lose focus from (§5.3).
         _flyout.Focus();
     }
 
@@ -153,6 +160,47 @@ internal sealed class DockAutoHideSurface
         {
             strip.Rebuild();
         }
+    }
+
+    /// <summary>
+    /// Whether the element is the flyout or a descendant of it, for focus
+    /// routing decisions that must not contest the flyout's own surface (§5.3).
+    /// </summary>
+    internal bool IsInFlyout(Visual? candidate)
+    {
+        for (var visual = candidate; visual is not null; visual = visual.GetVisualParent())
+        {
+            if (ReferenceEquals(visual, _flyout))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Dismisses the flyout when focus leaves it.
+    /// </summary>
+    /// <remarks>
+    /// <c>LostFocus</c> is a bubbling routed event, so this handler also sees
+    /// focus movement between the flyout's own children. Such a move is the
+    /// user interacting with the panel, not a dismissal of it: only focus that
+    /// lands outside the flyout's subtree closes it (§5.3).
+    /// </remarks>
+    private void OnFlyoutLostFocus(object? sender, FocusChangedEventArgs e)
+    {
+        if (_open is null)
+        {
+            return;
+        }
+
+        if (IsInFlyout(e.NewFocusedElement as Visual))
+        {
+            return;
+        }
+
+        Dismiss();
     }
 
     /// <summary>

@@ -459,14 +459,54 @@ public class Dock : TemplatedControl
     /// (§3.11). The library owns that state rather than delegating to Avalonia's
     /// focus scopes, whose public surface is thin and has moved between versions.
     /// </summary>
+    /// <remarks>
+    /// <c>GotFocus</c> is a bubbling routed event, so this handler also sees
+    /// focus movement between the dock's own children. Only a transition that
+    /// brings focus in from outside re-applies the activation; the auto-hide
+    /// flyout (§5.3) is never contested, or a parked pane's slide-out would be
+    /// dismissed the moment the user touched it.
+    /// </remarks>
     private void OnGotFocus(object? sender, FocusChangedEventArgs e)
     {
+        if (e.NewFocusedElement is Visual newVisual)
+        {
+            // The flyout is the user's active surface while it is open;
+            // restoring the active pane here would pull the pointer straight
+            // out of it.
+            if (AutoHide.IsInFlyout(newVisual))
+            {
+                return;
+            }
+
+            // Focus moving between this dock's own children is the user's own
+            // navigation; the restore applies when focus comes back from
+            // outside (§3.11).
+            if (IsWithinDock(e.OldFocusedElement as Visual))
+            {
+                return;
+            }
+        }
+
         if (Layout?.ActivePane is { } remembered
             && FindPaneControl(remembered) is { } control
             && !control.IsKeyboardFocusWithin)
         {
             control.Focus();
         }
+    }
+
+    /// <summary>Whether the element is this dock or a descendant of it.</summary>
+    private bool IsWithinDock(Visual? candidate)
+    {
+        for (var visual = candidate; visual is not null; visual = visual.GetVisualParent())
+        {
+            if (ReferenceEquals(visual, this))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     internal void NotifyLayoutChanged()
