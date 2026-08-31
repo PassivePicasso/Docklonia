@@ -538,6 +538,8 @@ public class Dock : TemplatedControl
             Activation.SeedFrom(layout);
         }
 
+        _coordinator.LayoutReplaced(e.OldValue as DockLayout, e.NewValue as DockLayout);
+
         _floats.Attach(e.NewValue as DockLayout);
         _coordinator.Resync();
         RebuildRoot();

@@ -63,7 +63,6 @@ internal sealed class DockItemCoordinator : IDisposable
 
         AdoptNodesFromLoadedLayout(layout, live);
         DropUnmatchedNodes(layout);
-        ForgetNodesOutsideLayout(layout);
 
         descriptors.ValidateKeys(live
             .Select(item => new KeyValuePair<object, string?>(item, KeyOf(item)))
@@ -255,26 +254,34 @@ internal sealed class DockItemCoordinator : IDisposable
     }
 
     /// <summary>
-    /// Forgets every tracked node the layout no longer holds.
+    /// Forgets the nodes a replaced layout took with it.
     /// </summary>
     /// <remarks>
-    /// A layout can be replaced whole -- reset to an empty one, or loaded from
-    /// a file -- and the nodes tracked for the one before it are then in no
-    /// tree. Kept, they answer that an item is already placed when it is
-    /// nowhere, so it is never placed again and the dock comes back empty.
+    /// Only when the layout itself is swapped, and only for what the old one
+    /// held: those nodes are in no tree afterwards, and kept they answer that
+    /// an item is already placed when it is nowhere -- so it is never placed
+    /// again and a reset comes back empty. Narrow on purpose. Doing this on
+    /// every resync would forget a node the layout holds and this walk missed,
+    /// and the item would then be placed a second time beside the tab it
+    /// already has.
     ///
     /// No close is signalled, for the reason <see cref="Release"/> gives: the
-    /// item did not close, its view went away. A node handed to another dock
-    /// is released before it moves, and a closed one is detached before it is
-    /// removed, so neither is ever one of these.
+    /// item did not close, its view went away.
     /// </remarks>
-    private void ForgetNodesOutsideLayout(DockLayout layout)
+    internal void LayoutReplaced(DockLayout? previous, DockLayout? current)
     {
-        var held = new HashSet<DockContent>(layout.AllPanes().OfType<DockContent>());
-
-        foreach (var content in _metadata.Keys.ToArray())
+        if (previous is null || ReferenceEquals(previous, current))
         {
-            if (held.Contains(content))
+            return;
+        }
+
+        var kept = current is null
+            ? new HashSet<DockContent>()
+            : new HashSet<DockContent>(current.AllPanes().OfType<DockContent>());
+
+        foreach (var content in previous.AllPanes().OfType<DockContent>())
+        {
+            if (kept.Contains(content))
             {
                 continue;
             }

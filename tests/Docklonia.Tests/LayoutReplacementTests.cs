@@ -84,31 +84,73 @@ public class LayoutReplacementTests
         Assert.Equal(0, ((Counter)first.Closed).Count);
     }
 
+    /// <summary>
+    /// A resync that is not a layout swap never places an item twice.
+    /// </summary>
+    /// <remarks>
+    /// Resync runs on attach, on a change of descriptors and on every change
+    /// of the collection, and each of those has the same nodes in the same
+    /// layout. An item that already has a tab must keep the one it has: a
+    /// second is a tab a person did not open, and closing either takes the
+    /// item away from both.
+    /// </remarks>
+    [AvaloniaFact]
+    public void ResyncingWithoutASwapPlacesNothingTwice()
+    {
+        var docs = new ObservableCollection<object> { new Doc("a"), new Doc("b") };
+        var dock = Showing(docs);
+
+        Assert.Equal(2, Contents(dock.Layout!));
+
+        docs.Add(new Doc("c"));
+        Flush();
+
+        dock.ItemDescriptors = Described();
+        Flush();
+
+        var window = (Window)TopLevel.GetTopLevel(dock)!;
+        window.Content = null;
+        Flush();
+        window.Content = dock;
+        Flush();
+
+        Assert.Equal(3, Contents(dock.Layout!));
+    }
+
     /// <summary>How many items the layout is presenting.</summary>
     private static int Contents(DockLayout layout)
         => layout.AllPanes().OfType<DockContent>().Count(node => node.Content is not null);
 
     /// <summary>A dock in a shown window, bound to these documents.</summary>
     private static Dock Showing(params Doc[] documents)
-    {
-        var dock = new Dock();
+        => Showing(new ObservableCollection<object>(documents));
 
-        dock.ItemDescriptors.Add(new DockItemDescriptor
-        {
-            DataType = typeof(Doc),
-            Title = new Avalonia.Data.Binding(nameof(Doc.Key)),
-            ContentKey = new Avalonia.Data.Binding(nameof(Doc.Key)),
-            ClosedCommand = new Avalonia.Data.Binding(nameof(Doc.Closed)),
-        });
+    /// <inheritdoc cref="Showing(Doc[])"/>
+    private static Dock Showing(ObservableCollection<object> documents)
+    {
+        var dock = new Dock { ItemDescriptors = Described() };
 
         new Window { Width = 800, Height = 600, Content = dock }.Show();
         Flush();
 
-        dock.ItemsSource = new ObservableCollection<object>(documents);
+        dock.ItemsSource = documents;
         Flush();
 
         return dock;
     }
+
+    /// <summary>How a document is titled, keyed and closed.</summary>
+    private static DockItemDescriptors Described()
+        => new DockItemDescriptors
+        {
+            new DockItemDescriptor
+            {
+                DataType = typeof(Doc),
+                Title = new Avalonia.Data.Binding(nameof(Doc.Key)),
+                ContentKey = new Avalonia.Data.Binding(nameof(Doc.Key)),
+                ClosedCommand = new Avalonia.Data.Binding(nameof(Doc.Closed)),
+            },
+        };
 
     /// <summary>Headless has no render loop, so layout is driven here.</summary>
     private static void Flush()
