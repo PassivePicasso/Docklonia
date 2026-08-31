@@ -63,6 +63,7 @@ internal sealed class DockItemCoordinator : IDisposable
 
         AdoptNodesFromLoadedLayout(layout, live);
         DropUnmatchedNodes(layout);
+        ForgetNodesOutsideLayout(layout);
 
         descriptors.ValidateKeys(live
             .Select(item => new KeyValuePair<object, string?>(item, KeyOf(item)))
@@ -101,22 +102,7 @@ internal sealed class DockItemCoordinator : IDisposable
     {
         foreach (var content in DockTree.ContentsIn(node).ToArray())
         {
-            if (!_metadata.Remove(content, out var metadata))
-            {
-                continue;
-            }
-
-            if (metadata.Item is { } item && _nodesByItem.TryGetValue(item, out var nodes))
-            {
-                nodes.Remove(content);
-
-                if (nodes.Count == 0)
-                {
-                    _nodesByItem.Remove(item);
-                }
-            }
-
-            metadata.Dispose();
+            Forget(content);
         }
     }
 
@@ -266,6 +252,56 @@ internal sealed class DockItemCoordinator : IDisposable
             Detach(node);
             DockMutator.Remove(layout, node);
         }
+    }
+
+    /// <summary>
+    /// Forgets every tracked node the layout no longer holds.
+    /// </summary>
+    /// <remarks>
+    /// A layout can be replaced whole -- reset to an empty one, or loaded from
+    /// a file -- and the nodes tracked for the one before it are then in no
+    /// tree. Kept, they answer that an item is already placed when it is
+    /// nowhere, so it is never placed again and the dock comes back empty.
+    ///
+    /// No close is signalled, for the reason <see cref="Release"/> gives: the
+    /// item did not close, its view went away. A node handed to another dock
+    /// is released before it moves, and a closed one is detached before it is
+    /// removed, so neither is ever one of these.
+    /// </remarks>
+    private void ForgetNodesOutsideLayout(DockLayout layout)
+    {
+        var held = new HashSet<DockContent>(layout.AllPanes().OfType<DockContent>());
+
+        foreach (var content in _metadata.Keys.ToArray())
+        {
+            if (held.Contains(content))
+            {
+                continue;
+            }
+
+            Forget(content);
+        }
+    }
+
+    /// <summary>Stops tracking one node, saying nothing about closing.</summary>
+    private void Forget(DockContent content)
+    {
+        if (!_metadata.Remove(content, out var metadata))
+        {
+            return;
+        }
+
+        if (metadata.Item is { } item && _nodesByItem.TryGetValue(item, out var nodes))
+        {
+            nodes.Remove(content);
+
+            if (nodes.Count == 0)
+            {
+                _nodesByItem.Remove(item);
+            }
+        }
+
+        metadata.Dispose();
     }
 
     /// <summary>Creates a node for an item that has none, and places it (§3.9).</summary>
