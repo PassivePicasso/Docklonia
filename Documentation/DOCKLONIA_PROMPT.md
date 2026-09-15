@@ -1388,6 +1388,12 @@ Drag-and-drop itself is pointer-driven, so the **menu path is what makes
 docking keyboard-accessible**. It must therefore expose every operation the
 drag engine does, not a subset.
 
+Cycling, tab stepping, traversal and opening the pane menu are **public
+operations on the `Dock`**, and the key map is one policy over them. A host
+with its own shortcut system binds the operations and sets `HandlesKeys` false,
+after which the `Dock` reads no key. Cancelling a drag with `Escape` is outside
+that switch: it cancels a gesture rather than performing an action.
+
 #### Assistive technology
 
 - Automation peers for every custom control — the `Dock`, panes, the tab

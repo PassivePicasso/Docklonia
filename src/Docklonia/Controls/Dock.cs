@@ -88,6 +88,9 @@ public class Dock : TemplatedControl
     public static readonly StyledProperty<AutoHideButtonMode> AutoHideButtonsProperty =
         AvaloniaProperty.Register<Dock, AutoHideButtonMode>(nameof(AutoHideButtons), AutoHideButtonMode.PerPane);
 
+    public static readonly StyledProperty<bool> HandlesKeysProperty =
+        AvaloniaProperty.Register<Dock, bool>(nameof(HandlesKeys), true);
+
     private readonly DockItemCoordinator _coordinator;
     private readonly DockFloatSurfaces _floats;
     private readonly DockGuideOverlay _guides = new();
@@ -117,6 +120,7 @@ public class Dock : TemplatedControl
         Commands = new DockCommands(this);
         Drag = new DockDragController(this, _guides);
         AutoHide = new DockAutoHideSurface(this);
+        Navigation = new DockNavigation(this);
         Keyboard = new DockKeyboard(this);
 
         DataTemplates.Add(AuthoredContentTemplate.Instance);
@@ -203,6 +207,17 @@ public class Dock : TemplatedControl
         set => SetValue(AutoHideButtonsProperty, value);
     }
 
+    /// <summary>
+    /// Whether this <c>Dock</c> answers the key map of §11. Set false by a host
+    /// that binds its own keys to the navigation operations below; the operations
+    /// stay available either way.
+    /// </summary>
+    public bool HandlesKeys
+    {
+        get => GetValue(HandlesKeysProperty);
+        set => SetValue(HandlesKeysProperty, value);
+    }
+
     internal DockActivation Activation { get; }
 
     /// <summary>Pane and tab operations, shared by menus, the keyboard, and drops (§13).</summary>
@@ -221,7 +236,10 @@ public class Dock : TemplatedControl
     /// <summary>Edge strips and the slide-out flyout for auto-hidden panes (§5.3).</summary>
     internal DockAutoHideSurface AutoHide { get; }
 
-    /// <summary>Keyboard operation of every docking gesture (§11).</summary>
+    /// <summary>Moving between panes and tabs, behind the public operations (§11).</summary>
+    internal DockNavigation Navigation { get; }
+
+    /// <summary>The default key map over those operations (§11).</summary>
     internal DockKeyboard Keyboard { get; }
 
     internal DockDescriptorSet Descriptors { get; private set; } = new(new object(), Array.Empty<DockItemDescriptor>());
@@ -311,6 +329,28 @@ public class Dock : TemplatedControl
 
         Drag.BeginExternal(content, title, screen);
     }
+
+    /// <summary>
+    /// Activates the next pane in most-recently-used order, or the previous one
+    /// when <paramref name="backwards"/>. False when there is nowhere to go.
+    /// </summary>
+    /// <remarks>
+    /// These operations are what the §11 key map performs. A host that owns its
+    /// own shortcuts binds them here and sets <see cref="HandlesKeys"/> false.
+    /// </remarks>
+    public bool CycleMostRecentlyUsed(bool backwards) => Navigation.CycleMostRecentlyUsed(backwards);
+
+    /// <summary>Cycles panes in activation order; the F6 gesture's operation.</summary>
+    public bool CyclePanes(bool backwards) => Navigation.CycleMostRecentlyUsed(backwards);
+
+    /// <summary>Selects the tab <paramref name="delta"/> steps from the active one, wrapping.</summary>
+    public bool StepTab(int delta) => Navigation.StepTab(delta);
+
+    /// <summary>Activates the nearest pane lying in <paramref name="direction"/> of the active one.</summary>
+    public bool Traverse(DockDirection direction) => Navigation.Traverse(direction);
+
+    /// <summary>Opens the active pane's menu, the keyboard route to every docking operation.</summary>
+    public bool OpenPaneMenu() => Navigation.OpenPaneMenu();
 
     /// <summary>Lets the drag controller reflect gesture state without exposing pseudo-classes.</summary>
     internal void SetDragging(bool dragging) => PseudoClasses.Set(":dragging", dragging);
@@ -444,6 +484,7 @@ public class Dock : TemplatedControl
     {
         base.OnKeyDown(e);
 
+        // Cancelling a drag is the gesture's own, never an action a host rebinds.
         if (e.Key == Key.Escape && Drag.IsDragging)
         {
             Drag.CancelGesture();
@@ -451,7 +492,7 @@ public class Dock : TemplatedControl
             return;
         }
 
-        if (Keyboard.Handle(e))
+        if (HandlesKeys && Keyboard.Handle(e))
         {
             e.Handled = true;
         }
