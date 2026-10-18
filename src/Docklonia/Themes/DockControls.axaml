@@ -143,7 +143,7 @@
     <Setter Property="Foreground" Value="{DynamicResource DockTitleForeground}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="{DynamicResource DockChromeFontSize}" />
     <Setter Property="Template">
       <ControlTemplate>
         <Border Background="{TemplateBinding Background}">
@@ -185,7 +185,8 @@
                       Content="&#x2715;"
                       ToolTip.Tip="Close tab"
                       IsVisible="False"
-                      Width="16" Height="16"
+                      Width="{DynamicResource DockIconSize}"
+                      Height="{DynamicResource DockIconSize}"
                       Margin="6,0,0,0"
                       Theme="{StaticResource DockChromeButton}" />
             </Grid>
@@ -245,7 +246,7 @@
       <ControlTemplate>
         <Border Background="{TemplateBinding Background}"
                 BorderBrush="{TemplateBinding BorderBrush}"
-                BorderThickness="1"
+                BorderThickness="{DynamicResource DockGuideBorderThickness}"
                 CornerRadius="{DynamicResource DockGuideCornerRadius}"
                 Margin="2">
           <Path Name="PART_Glyph"
@@ -280,9 +281,9 @@
       <ControlTemplate>
         <Border Background="{DynamicResource DockGhostBackground}"
                 BorderBrush="{DynamicResource DockTabActiveAccent}"
-                BorderThickness="1"
-                CornerRadius="3"
-                Padding="8,4">
+                BorderThickness="{DynamicResource DockGhostBorderThickness}"
+                CornerRadius="{DynamicResource DockGhostCornerRadius}"
+                Padding="{DynamicResource DockGhostPadding}">
           <TextBlock Text="{TemplateBinding Title}"
                      Foreground="{DynamicResource DockTitleForeground}"
                      VerticalAlignment="Center"
@@ -323,7 +324,7 @@
   <ControlTheme x:Key="{x:Type dock:DockAutoHideFlyout}" TargetType="dock:DockAutoHideFlyout">
     <Setter Property="Background" Value="{DynamicResource DockPaneBackground}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DockPaneBorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderThickness" Value="{DynamicResource DockPaneBorderThickness}" />
     <Setter Property="Template">
       <ControlTemplate>
         <Border Background="{TemplateBinding Background}"
@@ -362,22 +363,24 @@
       <ControlTemplate>
         <Border Name="PART_Root"
                 Background="{TemplateBinding Background}"
-                CornerRadius="2"
-                Padding="6,3">
+                CornerRadius="{DynamicResource DockTabCornerRadius}">
           <!--
             A side strip runs down the window, so its buttons must read down it
             too: the rotation is a layout transform rather than a render one, so
             the strip measures the turned label and stays as narrow as the text
-            is tall.
+            is tall. The padding is inside it, so it turns with the label.
           -->
           <LayoutTransformControl Name="PART_Rotation">
-            <StackPanel Orientation="Horizontal" Spacing="4">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="4"
+                        Margin="{DynamicResource DockTabPadding}">
               <TextBlock Text="{TemplateBinding Title}"
                          Foreground="{TemplateBinding Foreground}"
                          VerticalAlignment="Center" />
               <Button Name="PART_PinButton" Content="&#x1F4CC;"
                       ToolTip.Tip="Re-pin into the layout"
-                      Width="16" Height="16"
+                      Width="{DynamicResource DockIconSize}"
+                      Height="{DynamicResource DockIconSize}"
                       Theme="{StaticResource DockChromeButton}" />
             </StackPanel>
           </LayoutTransformControl>
@@ -400,13 +403,6 @@
       </Setter>
     </Style>
 
-    <!-- The padding turns with the label it surrounds. -->
-    <Style Selector="^:left /template/ Border#PART_Root">
-      <Setter Property="Padding" Value="3,6" />
-    </Style>
-    <Style Selector="^:right /template/ Border#PART_Root">
-      <Setter Property="Padding" Value="3,6" />
-    </Style>
     <Style Selector="^:pointerover /template/ Border#PART_Root">
       <Setter Property="Background" Value="{DynamicResource DockTabHoverBackground}" />
     </Style>

@@ -1,0 +1,15 @@
+# Literals Docklonia keeps, under the current reading of "size" in
+# StandaloneUnleash Documentation/UiRules.md: geometry is layout, data is a
+# colour that is not look. kind  file|*  Property=Value|Value|Construct  reason
+
+data      *                         Transparent              paints nothing: the ground a pointer is hit-tested on
+
+geometry  Themes/DockControls.axaml  Width=26                 a title-bar button's box, wider than the icon it holds
+geometry  Themes/DockControls.axaml  Margin=6,0               an uneven offset measured for this layout; no token holds one
+geometry  Themes/DockControls.axaml  Margin=0,0,1,0           the gap after each tab, on one side; no token holds one side
+geometry  Themes/DockControls.axaml  BorderThickness=0,2,0,0  a rule drawn on one side; no token holds one side
+geometry  Themes/DockControls.axaml  Margin=6,0,0,0           an uneven offset measured for this layout; no token holds one
+geometry  Themes/DockControls.axaml  Margin=2                 room between guide buttons, finer than the density inset
+geometry  Themes/DockControls.axaml  Padding=2                room inside a strip, finer than the density inset
+geometry  Themes/DockControls.axaml  Spacing=2                spacing inside a row or list, finer than the density gap
+geometry  Themes/DockControls.axaml  Spacing=4                spacing inside a row or list, finer than the density gap

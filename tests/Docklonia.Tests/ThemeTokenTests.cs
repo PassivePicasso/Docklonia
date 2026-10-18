@@ -35,6 +35,9 @@ public class ThemeTokenTests
         "DockPaneBorderThickness", "DockTabPadding", "DockTabCornerRadius",
         "DockGuideCornerRadius", "DockSplitterThickness", "DockTitleBarHeight",
         "DockTabMaxWidth", "DockTabMinWidth", "DockAutoHideStripThickness",
+        "DockChromeFontSize", "DockIconSize", "DockGuideBorderThickness",
+        "DockGhostBorderThickness", "DockGhostCornerRadius", "DockGhostPadding",
+        "DockDropPreviewBorderThickness",
     };
 
     // Tab width bounds are layout limits the token set has no size for.
@@ -91,6 +94,8 @@ public class ThemeTokenTests
             var pane = window.GetVisualDescendants().OfType<DockPaneControl>().First();
             var tab = window.GetVisualDescendants().OfType<DockTab>().First();
             var titleBar = window.GetVisualDescendants().OfType<Border>().First(border => border.Name == "PART_TitleBar");
+            var menu = pane.GetVisualDescendants().OfType<Button>().First(button => button.Name == "PART_MenuButton");
+            var close = tab.GetVisualDescendants().OfType<Button>().First(button => button.Name == "PART_CloseButton");
             var seen = new List<(Color Surface, Thickness Padding)>();
 
             foreach (var (scheme, density) in new[]
@@ -111,6 +116,8 @@ public class ThemeTokenTests
                 Assert.Equal(ColourOf(tab, Token.SurfaceRaised), ((ISolidColorBrush)tab.Background!).Color);
                 Assert.Equal(ColourOf(tab, Token.Text), ((ISolidColorBrush)tab.Foreground!).Color);
                 Assert.Equal(ValueOf(tab, Token.ControlPadding), tab.Padding);
+                Assert.Equal(ValueOf(menu, Token.TypeSmall), menu.FontSize);
+                Assert.Equal(ValueOf(close, Token.IconSize), close.Width);
 
                 seen.Add((((ISolidColorBrush)pane.Background!).Color, tab.Padding));
             }

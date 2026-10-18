@@ -44,6 +44,13 @@
       <theme:ComponentToken Key="DockSplitterThickness" Token="Theme.Space.Gap" />
       <theme:ComponentToken Key="DockTitleBarHeight" Token="Theme.Control.Height" />
       <theme:ComponentToken Key="DockAutoHideStripThickness" Token="Theme.Control.Height" />
+      <theme:ComponentToken Key="DockChromeFontSize" Token="Theme.Type.Small" />
+      <theme:ComponentToken Key="DockIconSize" Token="Theme.Icon.Size" />
+      <theme:ComponentToken Key="DockGuideBorderThickness" Token="Theme.Stroke" />
+      <theme:ComponentToken Key="DockGhostBorderThickness" Token="Theme.Stroke" />
+      <theme:ComponentToken Key="DockGhostCornerRadius" Token="Theme.Radius" />
+      <theme:ComponentToken Key="DockGhostPadding" Token="Theme.Control.Padding" />
+      <theme:ComponentToken Key="DockDropPreviewBorderThickness" Token="Theme.Stroke.Focus" />
     </theme:ComponentTokens>
   </ResourceDictionary.MergedDictionaries>
 
