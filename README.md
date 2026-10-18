@@ -175,6 +175,11 @@ declaratively-authored `DockItem` beside bound content, duplicated tabs sharing
 one view model, a vetoed close, and save/load of a JSON layout covering docked,
 floating, and auto-hidden state together.
 
+The theme's resource keys read the tokens of `Unleash.Theme`, so the docks take
+a host's scheme and density, switched at run time with `ThemeTokens.Apply`; an
+application that never merges the tokens gets them from the include. A key an
+application overrides still wins over its token.
+
 The **Restyle** button swaps in
 [`Themes/Restyle.axaml`](samples/Docklonia.Sample/Themes/Restyle.axaml), which
 restyles every control using only documented resource keys and pseudo-classes —
