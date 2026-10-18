@@ -654,7 +654,9 @@ public class Dock : TemplatedControl
         }
     }
 
-    internal IEnumerable<DockPaneControl> PaneControls => EnumeratePaneControls();
+    /// <summary>The panes on show, which a gesture or a key can reach.</summary>
+    internal IEnumerable<DockPaneControl> PaneControls
+        => EnumeratePaneControls().Where(control => control.IsEffectivelyVisible);
 }
 
 /// <summary>How an auto-hide flyout is summoned (§5.3).</summary>

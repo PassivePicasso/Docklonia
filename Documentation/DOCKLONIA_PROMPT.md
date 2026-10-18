@@ -1161,8 +1161,12 @@ zero-setup path (§1) and nothing in the library requires it.
   matches each serialized content key against the items already in its bound
   collection, using the same `ContentKey` binding. The collection is the set of
   live documents; the layout file only records where they sit. A key with no
-  matching item yields an empty or dropped node — define which, and never
-  fabricate content.
+  matching item yields a **hidden placeholder**, never fabricated content: the
+  node stays in the tree with no content, takes no room and has no tab,
+  window or strip button, serializes as itself, and is claimed when an item
+  with its key arrives in the collection. An item can arrive after its window
+  is built, and its place must survive that window being saved first. A
+  composite holding only placeholders is hidden with them.
 - **Every node has a key by construction.** Describe-and-forbid (§3.7) makes
   this structural: content with no descriptor never docks. A type with no
   natural per-instance identifier is still dockable via a **constant**

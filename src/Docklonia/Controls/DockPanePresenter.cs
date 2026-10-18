@@ -14,7 +14,7 @@ namespace Docklonia.Controls;
 /// becomes control shape. Each <c>Dock</c> independently builds presenters for
 /// whatever nodes it now owns and discards them when the tree changes — which is
 /// why moving a node between trees, including across windows, needs no visual
-/// reparenting.
+/// reparenting. A node with nothing to show is presented hidden (§8).
 /// </remarks>
 public class DockPanePresenter : Decorator
 {
@@ -36,18 +36,24 @@ public class DockPanePresenter : Decorator
 
     private void OnPaneChanged(Avalonia.AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.OldValue is INotifyPropertyChanged previous)
+        if (e.OldValue is DockPane previous)
         {
             previous.PropertyChanged -= OnNodePropertyChanged;
+            previous.StructureChanged -= OnStructureChanged;
         }
 
-        if (e.NewValue is INotifyPropertyChanged current)
+        if (e.NewValue is DockPane current)
         {
             current.PropertyChanged += OnNodePropertyChanged;
+            current.StructureChanged += OnStructureChanged;
         }
 
         Rebuild();
     }
+
+    private void OnStructureChanged(object? sender, EventArgs e) => UpdateShown();
+
+    private void UpdateShown() => IsVisible = Pane is null || DockTree.Shows(Pane);
 
     private void OnNodePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -67,6 +73,8 @@ public class DockPanePresenter : Decorator
             null => null,
             var node => new DockPaneControl { Owner = Owner, Node = node },
         };
+
+        UpdateShown();
 
         Owner?.RegisterRealizedView(this);
     }

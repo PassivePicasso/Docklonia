@@ -101,7 +101,7 @@ internal sealed class DockCommands
             return;
         }
 
-        foreach (var sibling in tabs.Children.Where(child => !ReferenceEquals(child, node)).ToArray())
+        foreach (var sibling in tabs.Children.Where(child => !ReferenceEquals(child, node) && DockTree.Shows(child)).ToArray())
         {
             RequestClose(sibling);
         }
@@ -115,7 +115,7 @@ internal sealed class DockCommands
             return;
         }
 
-        foreach (var child in tabs.Children.ToArray())
+        foreach (var child in tabs.Children.Where(DockTree.Shows).ToArray())
         {
             RequestClose(child);
         }

@@ -45,13 +45,21 @@ internal sealed class DockNavigation
 
     internal bool StepTab(int delta)
     {
-        if (ActivePane()?.TabPane is not { } tabs || tabs.Children.Count < 2)
+        if (ActivePane()?.TabPane is not { } pane)
         {
             return false;
         }
 
-        var index = tabs.SelectedChild is null ? 0 : tabs.IndexOf(tabs.SelectedChild);
-        var target = tabs.Children[Wrap(index + delta, tabs.Children.Count)];
+        // Only the tabs on show: a placeholder is stepped over (§8).
+        var tabs = pane.Children.Where(DockTree.Shows).ToList();
+
+        if (tabs.Count < 2)
+        {
+            return false;
+        }
+
+        var index = pane.SelectedChild is { } selected ? Math.Max(tabs.IndexOf(selected), 0) : 0;
+        var target = tabs[Wrap(index + delta, tabs.Count)];
 
         _dock.ActivateNode(target);
         return true;

@@ -31,7 +31,8 @@ public sealed class DockContent : DockPane, IDockNode
 
     /// <summary>
     /// The consumer's own object, rendered through ordinary
-    /// <c>DataTemplate</c> resolution (§3.8).
+    /// <c>DataTemplate</c> resolution (§3.8). Null while a loaded node waits
+    /// for its item: a hidden placeholder holding the item's place (§8).
     /// </summary>
     public object? Content
     {
@@ -39,7 +40,13 @@ public sealed class DockContent : DockPane, IDockNode
         set
         {
             DockContentGuard.Reject(value);
-            Set(ref _content, value);
+
+            var waited = _content is null;
+
+            if (Set(ref _content, value) && waited != value is null)
+            {
+                RaiseStructureChanged();
+            }
         }
     }
 

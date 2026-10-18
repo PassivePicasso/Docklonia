@@ -82,7 +82,13 @@ public sealed class DockTabPane : DockPane, IDockNode
     public bool IsPersistent
     {
         get => _isPersistent;
-        set => Set(ref _isPersistent, value);
+        set
+        {
+            if (Set(ref _isPersistent, value))
+            {
+                RaiseStructureChanged();
+            }
+        }
     }
 
     internal void Insert(int index, IDockNode child)

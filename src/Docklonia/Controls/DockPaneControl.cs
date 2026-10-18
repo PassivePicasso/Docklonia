@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
@@ -85,18 +84,25 @@ public class DockPaneControl : TemplatedControl
 
     internal Dock? Owner { get; set; }
 
-    internal IReadOnlyList<DockTab> Tabs => _tabs;
+    /// <summary>The tabs on show; a placeholder's tab is hidden (§8).</summary>
+    internal IReadOnlyList<DockTab> Tabs => _tabs.Where(tab => tab.IsVisible).ToList();
 
     /// <summary>The tab pane backing this control, or null when it presents a bare leaf.</summary>
     internal DockTabPane? TabPane => Node as DockTabPane;
 
     /// <summary>The node currently displayed — the tab pane's selection, or the leaf itself.</summary>
     /// <remarks>
-    /// A tab pane answers its selection and nothing else, including when it has
-    /// none: falling back to the pane would make an emptied persistent pane its
-    /// own content, and presenting a pane inside itself does not terminate.
+    /// A tab pane answers its selection, or its first child on show while the
+    /// selection is a placeholder, and never itself: falling back to the pane
+    /// would make an emptied persistent pane its own content, and presenting a
+    /// pane inside itself does not terminate.
     /// </remarks>
-    internal IDockNode? SelectedNode => TabPane is { } tabs ? tabs.SelectedChild : Node;
+    internal IDockNode? SelectedNode => TabPane is { } tabs ? Shown(tabs) : Node;
+
+    private static IDockNode? Shown(DockTabPane tabs)
+        => tabs.SelectedChild is { } selected && DockTree.Shows(selected)
+            ? selected
+            : tabs.Children.FirstOrDefault(DockTree.Shows) ?? tabs.SelectedChild;
 
     protected override Avalonia.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
         => new DockPaneAutomationPeer(this);
@@ -157,13 +163,21 @@ public class DockPaneControl : TemplatedControl
         if (e.OldValue is DockTabPane oldPane)
         {
             oldPane.PropertyChanged -= OnPanePropertyChanged;
-            ((INotifyCollectionChanged)oldPane.Children).CollectionChanged -= OnChildrenChanged;
+        }
+
+        if (e.OldValue is DockPane oldNode)
+        {
+            oldNode.StructureChanged -= OnStructureChanged;
         }
 
         if (e.NewValue is DockTabPane newPane)
         {
             newPane.PropertyChanged += OnPanePropertyChanged;
-            ((INotifyCollectionChanged)newPane.Children).CollectionChanged += OnChildrenChanged;
+        }
+
+        if (e.NewValue is DockPane newNode)
+        {
+            newNode.StructureChanged += OnStructureChanged;
         }
 
         Rebuild();
@@ -183,7 +197,8 @@ public class DockPaneControl : TemplatedControl
         }
     }
 
-    private void OnChildrenChanged(object? sender, NotifyCollectionChangedEventArgs e) => Rebuild();
+    /// <summary>A child came or went, or a placeholder was claimed.</summary>
+    private void OnStructureChanged(object? sender, EventArgs e) => Rebuild();
 
     private void SyncTabs()
     {
@@ -213,10 +228,11 @@ public class DockPaneControl : TemplatedControl
             _tabs[i].Owner = Owner;
             _tabs[i].Pane = this;
             _tabs[i].Node = nodes[i];
+            _tabs[i].IsVisible = DockTree.Shows(nodes[i]);
         }
 
         SyncSelection();
-        PseudoClasses.Set(":single-tab", nodes.Count <= 1);
+        PseudoClasses.Set(":single-tab", nodes.Count(DockTree.Shows) <= 1);
     }
 
     private void SyncSelection()
@@ -245,6 +261,8 @@ public class DockPaneControl : TemplatedControl
         _contentHost.Content = SelectedNode switch
         {
             DockContent content => content.Content,
+            { } composite when _contentHost.Content is DockPanePresenter { Pane: var shown }
+                && ReferenceEquals(shown, composite) => _contentHost.Content,
             { } composite => new DockPanePresenter { Owner = Owner, Pane = composite },
             _ => null,
         };

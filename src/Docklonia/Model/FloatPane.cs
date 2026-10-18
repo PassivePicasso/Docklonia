@@ -50,6 +50,7 @@ public sealed class FloatPane : DockPane
             Adopt(value);
             Raise();
             Raise(nameof(Children));
+            RaiseStructureChanged();
         }
     }
 

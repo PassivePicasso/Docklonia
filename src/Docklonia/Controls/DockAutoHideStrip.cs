@@ -64,12 +64,17 @@ public class DockAutoHideStrip : TemplatedControl
             return;
         }
 
-        var entries = Owner.Layout?.AutoHidden.Where(entry => entry.Edge == Edge).ToArray()
+        // A parked placeholder has no button until its item claims it (§8).
+        var entries = Owner.Layout?.AutoHidden
+                .Where(entry => entry.Edge == Edge && DockTree.Shows(entry.Pane))
+                .ToArray()
             ?? Array.Empty<AutoHideEntry>();
 
         var wanted = entries
             .SelectMany(entry => Owner.AutoHideButtons == AutoHideButtonMode.PerTab
-                ? DockTree.ContentsIn(entry.Pane).Select(content => (Entry: entry, Title: content.Title))
+                ? DockTree.ContentsIn(entry.Pane)
+                    .Where(DockTree.Shows)
+                    .Select(content => (Entry: entry, Title: content.Title))
                 : new[] { (Entry: entry, Title: entry.Pane.Title ?? "Pane") })
             .ToArray();
 

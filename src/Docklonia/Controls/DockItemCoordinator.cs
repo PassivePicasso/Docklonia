@@ -53,7 +53,9 @@ internal sealed class DockItemCoordinator : IDisposable
 
     /// <summary>
     /// Reconciles the tree against the current items. Placement is consulted only
-    /// for items with no node — once a node exists, the layout wins (§3.9).
+    /// for items with no node — once a node exists, the layout wins (§3.9). A
+    /// loaded node whose item has not arrived stays as a hidden placeholder, and
+    /// the item claims it when it does (§8).
     /// </summary>
     internal void Resync()
     {
@@ -62,7 +64,6 @@ internal sealed class DockItemCoordinator : IDisposable
         var live = Items().Concat(AuthoredItems()).ToArray();
 
         AdoptNodesFromLoadedLayout(layout, live);
-        DropUnmatchedNodes(layout);
 
         descriptors.ValidateKeys(live
             .Select(item => new KeyValuePair<object, string?>(item, KeyOf(item)))
@@ -223,33 +224,6 @@ internal sealed class DockItemCoordinator : IDisposable
                 node.Content = item;
                 Track(item, node);
             }
-        }
-    }
-
-    /// <summary>
-    /// A serialized key with no matching item yields a <b>dropped</b> node, never
-    /// a fabricated one (§8). An empty tab would be a node the user cannot reason
-    /// about; dropping it runs the same normalization every other removal does.
-    /// </summary>
-    /// <remarks>
-    /// Only nodes still awaiting content are dropped — those are the ones a
-    /// layout document produced and load-time matching could not satisfy. A node
-    /// already holding live content that simply is not in <b>this</b> collection
-    /// arrived by drag from another <c>Dock</c> (§7), and content keys are
-    /// <c>Dock</c>-scoped, so its absence here says nothing about it. Dropping it
-    /// would delete a pane the user just moved.
-    /// </remarks>
-    private void DropUnmatchedNodes(DockLayout layout)
-    {
-        foreach (var node in layout.AllPanes().OfType<DockContent>().ToArray())
-        {
-            if (node.Content is not null)
-            {
-                continue;
-            }
-
-            Detach(node);
-            DockMutator.Remove(layout, node);
         }
     }
 
