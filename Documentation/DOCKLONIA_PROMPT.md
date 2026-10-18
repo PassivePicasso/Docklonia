@@ -1448,6 +1448,11 @@ Consequences the implementation must honour:
 - **Theme resource keys are public API.** Name and document the brushes,
   thicknesses, and metrics the default theme consumes, so an application can
   restyle by overriding resources without replacing whole templates.
+- **Every colour and role size reads a key, and the build holds it.**
+  `Unleash.UiRules`, a build-only analyzer that ships to no consumer, fails
+  on a literal colour or size in the themes (StandaloneUnleash
+  `Documentation/UiRules.md`, rule 1). The layout geometry kept literal is
+  listed with its reasons in `src/Docklonia/UiRules.exceptions`.
 - **The default theme is one merged dictionary**, matching §1's zero-setup
   requirement.
 

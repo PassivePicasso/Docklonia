@@ -44,7 +44,7 @@
   <Style Selector="Border.dock-drop-preview">
     <Setter Property="Background" Value="{DynamicResource DockDropPreviewBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DockDropPreviewBorderBrush}" />
-    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderThickness" Value="{DynamicResource DockDropPreviewBorderThickness}" />
   </Style>
 
 </Styles>
