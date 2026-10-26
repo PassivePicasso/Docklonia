@@ -12,7 +12,7 @@
 
   <!-- Every test held to the bytes it allocated when last measured. -->
   <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
-    <PackageReference Include="Unleash.Allowance" Version="0.1.4" />
+    <PackageReference Include="Unleash.Allowance" Version="0.1.5" />
   </ItemGroup>
 
 </Project>
