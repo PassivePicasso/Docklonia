@@ -10,4 +10,10 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
+  <!-- A thread started outside Unleash.Threading, or work posted to the pool,
+       does not compile; the package leaves test projects out. -->
+  <ItemGroup>
+    <PackageReference Include="Unleash.Threading.Check" Version="0.1.0-step1.1" PrivateAssets="all" />
+  </ItemGroup>
+
 </Project>
