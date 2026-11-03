@@ -51,11 +51,9 @@
       <theme:ComponentToken Key="DockGhostCornerRadius" Token="Theme.Radius" />
       <theme:ComponentToken Key="DockGhostPadding" Token="Theme.Control.Padding" />
       <theme:ComponentToken Key="DockDropPreviewBorderThickness" Token="Theme.Stroke.Focus" />
+      <theme:ComponentToken Key="DockTabMaxWidth" Token="Theme.Tab.MaxWidth" />
+      <theme:ComponentToken Key="DockTabMinWidth" Token="Theme.Tab.MinWidth" />
     </theme:ComponentTokens>
   </ResourceDictionary.MergedDictionaries>
-
-  <!-- How wide a tab may grow or shrink: layout bounds no token holds. -->
-  <x:Double x:Key="DockTabMaxWidth">240</x:Double>
-  <x:Double x:Key="DockTabMinWidth">48</x:Double>
 
 </ResourceDictionary>

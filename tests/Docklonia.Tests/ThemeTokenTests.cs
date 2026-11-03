@@ -40,9 +40,6 @@ public class ThemeTokenTests
         "DockDropPreviewBorderThickness",
     };
 
-    // Tab width bounds are layout limits the token set has no size for.
-    private static readonly string[] LiteralKeys = { "DockTabMaxWidth", "DockTabMinWidth" };
-
     private sealed class Doc
     {
         public Doc(string key) => Key = key;
@@ -60,7 +57,7 @@ public class ThemeTokenTests
 
         var named = mapped.Keys.Concat(resources.Keys.Cast<string>()).OrderBy(key => key);
         Assert.Equal(BrushKeys.Concat(MetricKeys).OrderBy(key => key), named);
-        Assert.Equal(LiteralKeys.OrderBy(key => key), resources.Keys.Cast<string>().OrderBy(key => key));
+        Assert.Empty(resources.Keys);
 
         var app = Application.Current!;
 
@@ -69,7 +66,7 @@ public class ThemeTokenTests
             Assert.Contains(mapped[key], Token.Colours);
         }
 
-        foreach (var key in MetricKeys.Except(LiteralKeys))
+        foreach (var key in MetricKeys)
         {
             Assert.Contains(mapped[key], Token.Sizes);
         }
