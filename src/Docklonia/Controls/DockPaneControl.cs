@@ -6,6 +6,7 @@ using Avalonia.Controls.Metadata;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using Docklonia.Model;
 
 using Docklonia.Automation;
@@ -158,29 +159,61 @@ public class DockPaneControl : TemplatedControl
 
     internal void SetDropTarget(bool active) => PseudoClasses.Set(":drop-target", active);
 
+    /// <remarks>
+    /// The node is followed only while this is in the visual tree, so a node
+    /// does not keep a pane control discarded around it, nor the tabs and
+    /// items that control last showed.
+    /// </remarks>
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        Follow(Node);
+        Rebuild();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+
+        Unfollow(Node);
+    }
+
     private void OnNodeChanged(AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.OldValue is DockTabPane oldPane)
+        if (this.IsAttachedToVisualTree())
         {
-            oldPane.PropertyChanged -= OnPanePropertyChanged;
-        }
-
-        if (e.OldValue is DockPane oldNode)
-        {
-            oldNode.StructureChanged -= OnStructureChanged;
-        }
-
-        if (e.NewValue is DockTabPane newPane)
-        {
-            newPane.PropertyChanged += OnPanePropertyChanged;
-        }
-
-        if (e.NewValue is DockPane newNode)
-        {
-            newNode.StructureChanged += OnStructureChanged;
+            Unfollow(e.OldValue as IDockNode);
+            Follow(e.NewValue as IDockNode);
         }
 
         Rebuild();
+    }
+
+    private void Follow(IDockNode? node)
+    {
+        if (node is DockTabPane pane)
+        {
+            pane.PropertyChanged += OnPanePropertyChanged;
+        }
+
+        if (node is DockPane structured)
+        {
+            structured.StructureChanged += OnStructureChanged;
+        }
+    }
+
+    private void Unfollow(IDockNode? node)
+    {
+        if (node is DockTabPane pane)
+        {
+            pane.PropertyChanged -= OnPanePropertyChanged;
+        }
+
+        if (node is DockPane structured)
+        {
+            structured.StructureChanged -= OnStructureChanged;
+        }
     }
 
     private void OnPanePropertyChanged(object? sender, PropertyChangedEventArgs e)

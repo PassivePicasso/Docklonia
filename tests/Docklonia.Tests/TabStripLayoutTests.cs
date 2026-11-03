@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -94,5 +95,38 @@ public class TabStripLayoutTests
 
         Assert.Equal(new[] { 0d, 24d, 48d }, bounds.Select(rect => rect.Y));
         Assert.All(bounds, rect => Assert.Equal(120, rect.Width, 3));
+    }
+
+    /// <remarks>
+    /// A strip in a hidden pane is not measured again, and the tab it lost
+    /// may be all that holds a closed item, and with it a plugin's types.
+    /// </remarks>
+    [AvaloniaFact]
+    public void ARemovedTabIsNotHeldByAStripThatIsNotMeasuredAgain()
+    {
+        var panel = Strip(60, 120);
+
+        var removed = LaidOutThenRemoved(panel);
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.False(removed.IsAlive);
+
+        GC.KeepAlive(panel);
+    }
+
+    /// <summary>Lays the strip out, then takes its last tab away without laying it out again.</summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference LaidOutThenRemoved(DockTabStripPanel panel)
+    {
+        Layout(panel, 400);
+
+        var tab = panel.Children[^1];
+
+        panel.Children.Remove(tab);
+
+        return new WeakReference(tab);
     }
 }

@@ -94,7 +94,6 @@ public class Dock : TemplatedControl
     private readonly DockItemCoordinator _coordinator;
     private readonly DockFloatSurfaces _floats;
     private readonly DockGuideOverlay _guides = new();
-    private readonly List<DockPanePresenter> _realized = new();
 
     private Decorator? _rootHost;
     private Panel? _overlayHost;
@@ -419,14 +418,6 @@ public class Dock : TemplatedControl
     }
 
     internal bool DescribesContent(object? content) => Descriptors.Describes(content);
-
-    internal void RegisterRealizedView(DockPanePresenter presenter)
-    {
-        if (!_realized.Contains(presenter))
-        {
-            _realized.Add(presenter);
-        }
-    }
 
     /// <summary>
     /// Records activation and, only when this <c>Dock</c> already holds keyboard

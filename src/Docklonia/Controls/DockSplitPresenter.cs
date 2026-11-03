@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.VisualTree;
 using Docklonia.Model;
 
 namespace Docklonia.Controls;
@@ -148,16 +149,45 @@ public class DockSplitPresenter : Control
         ? new Size(extent, available.Height)
         : new Size(available.Width, extent);
 
-    private void OnSplitChanged(AvaloniaPropertyChangedEventArgs e)
+    /// <remarks>
+    /// The split is followed only while this is in the visual tree, so a split
+    /// does not keep a presenter discarded around it.
+    /// </remarks>
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (e.OldValue is DockSplitPane previous)
+        base.OnAttachedToVisualTree(e);
+
+        if (Split is { } split)
         {
-            previous.PropertyChanged -= OnSplitPropertyChanged;
+            split.PropertyChanged += OnSplitPropertyChanged;
         }
 
-        if (e.NewValue is DockSplitPane current)
+        Sync();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+
+        if (Split is { } split)
         {
-            current.PropertyChanged += OnSplitPropertyChanged;
+            split.PropertyChanged -= OnSplitPropertyChanged;
+        }
+    }
+
+    private void OnSplitChanged(AvaloniaPropertyChangedEventArgs e)
+    {
+        if (this.IsAttachedToVisualTree())
+        {
+            if (e.OldValue is DockSplitPane previous)
+            {
+                previous.PropertyChanged -= OnSplitPropertyChanged;
+            }
+
+            if (e.NewValue is DockSplitPane current)
+            {
+                current.PropertyChanged += OnSplitPropertyChanged;
+            }
         }
 
         Sync();
