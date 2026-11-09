@@ -422,7 +422,8 @@ public class Dock : TemplatedControl
     /// <summary>
     /// Records activation and, only when this <c>Dock</c> already holds keyboard
     /// focus, moves focus with it. Without that gate, activating a pane in a
-    /// background window would yank focus across windows (§3.11).
+    /// background window would yank focus across windows (§3.11). Focus already
+    /// inside the pane stays where it is.
     /// </summary>
     internal void ActivateNode(IDockPane? node)
     {
@@ -438,7 +439,9 @@ public class Dock : TemplatedControl
 
         SetCurrentValue(ActiveContentProperty, ContentOf(node));
 
-        if (IsKeyboardFocusWithin && FindPaneControl(node) is { } control)
+        if (IsKeyboardFocusWithin
+            && FindPaneControl(node) is { } control
+            && !control.IsKeyboardFocusWithin)
         {
             control.Focus();
         }
