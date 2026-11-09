@@ -54,4 +54,17 @@ public static class DockTree
 
     public static IDockPane? FindById(IDockPane? root, string id)
         => SelfAndDescendants(root).FirstOrDefault(pane => pane.Id == id);
+
+    /// <summary>
+    /// Whether a node has anything to show. A placeholder waiting for its item
+    /// does not, nor does a composite holding only placeholders; a persistent
+    /// pane shows as itself (§8).
+    /// </summary>
+    internal static bool Shows(IDockPane? node) => node switch
+    {
+        null => false,
+        DockContent content => content.Content is not null,
+        DockTabPane tabs => tabs.IsPersistent || tabs.Children.Any(Shows),
+        _ => node.Children.Any(Shows),
+    };
 }

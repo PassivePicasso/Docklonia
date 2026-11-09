@@ -1161,8 +1161,12 @@ zero-setup path (§1) and nothing in the library requires it.
   matches each serialized content key against the items already in its bound
   collection, using the same `ContentKey` binding. The collection is the set of
   live documents; the layout file only records where they sit. A key with no
-  matching item yields an empty or dropped node — define which, and never
-  fabricate content.
+  matching item yields a **hidden placeholder**, never fabricated content: the
+  node stays in the tree with no content, takes no room and has no tab,
+  window or strip button, serializes as itself, and is claimed when an item
+  with its key arrives in the collection. An item can arrive after its window
+  is built, and its place must survive that window being saved first. A
+  composite holding only placeholders is hidden with them.
 - **Every node has a key by construction.** Describe-and-forbid (§3.7) makes
   this structural: content with no descriptor never docks. A type with no
   natural per-instance identifier is still dockable via a **constant**
@@ -1388,6 +1392,12 @@ Drag-and-drop itself is pointer-driven, so the **menu path is what makes
 docking keyboard-accessible**. It must therefore expose every operation the
 drag engine does, not a subset.
 
+Cycling, tab stepping, traversal and opening the pane menu are **public
+operations on the `Dock`**, and the key map is one policy over them. A host
+with its own shortcut system binds the operations and sets `HandlesKeys` false,
+after which the `Dock` reads no key. Cancelling a drag with `Escape` is outside
+that switch: it cancels a gesture rather than performing an action.
+
 #### Assistive technology
 
 - Automation peers for every custom control — the `Dock`, panes, the tab
@@ -1438,6 +1448,11 @@ Consequences the implementation must honour:
 - **Theme resource keys are public API.** Name and document the brushes,
   thicknesses, and metrics the default theme consumes, so an application can
   restyle by overriding resources without replacing whole templates.
+- **Every colour and role size reads a key, and the build holds it.**
+  `Unleash.UiRules`, a build-only analyzer that ships to no consumer, fails
+  on a literal colour or size in the themes (StandaloneUnleash
+  `Documentation/UiRules.md`, rule 1). The layout geometry kept literal is
+  listed with its reasons in `src/Docklonia/UiRules.exceptions`.
 - **The default theme is one merged dictionary**, matching §1's zero-setup
   requirement.
 

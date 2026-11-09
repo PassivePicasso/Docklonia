@@ -116,6 +116,27 @@ XAML precedence rule.
 The single library type a consumer holds is the opaque `DockLayout` on the shell
 view model. It is stored and handed back, never inspected.
 
+## Keys, and hosts that bind their own
+
+The `Dock` answers the key map of
+[`Documentation/KEYBOARD_WALKTHROUGH.md`](Documentation/KEYBOARD_WALKTHROUGH.md)
+out of the box. The operations behind those keys are public, so an application
+with its own shortcut system binds them itself:
+
+```csharp
+dock.CycleMostRecentlyUsed(backwards: false);  // Ctrl+Tab
+dock.CyclePanes(backwards: false);             // F6
+dock.StepTab(1);                               // Ctrl+PageDown
+dock.Traverse(DockDirection.Right);            // Alt+Right
+dock.OpenPaneMenu();                           // Shift+F10
+```
+
+Each returns whether there was anything to do. Setting `HandlesKeys="False"`
+stops the `Dock` consulting its own key map, so those presses reach the host's
+dispatcher unhandled; the operations stay available either way. `Escape`
+cancelling a drag in progress is unaffected — that is a gesture's cancel, not
+an action a host rebinds.
+
 ## Design in one paragraph
 
 **The layout tree is view models, not controls.** No `IDockPane` implementation
@@ -153,6 +174,11 @@ tool-only `Dock` that refuses document content, seeded tool groups, a
 declaratively-authored `DockItem` beside bound content, duplicated tabs sharing
 one view model, a vetoed close, and save/load of a JSON layout covering docked,
 floating, and auto-hidden state together.
+
+The theme's resource keys read the tokens of `Unleash.Theme`, so the docks take
+a host's scheme and density, switched at run time with `ThemeTokens.Apply`; an
+application that never merges the tokens gets them from the include. A key an
+application overrides still wins over its token.
 
 The **Restyle** button swaps in
 [`Themes/Restyle.axaml`](samples/Docklonia.Sample/Themes/Restyle.axaml), which

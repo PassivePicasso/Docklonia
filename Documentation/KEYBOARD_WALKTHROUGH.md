@@ -28,6 +28,13 @@ pointer aside.
 | `←` `→` `↑` `↓` | Flyout grip | Resize the flyout, clamped to its bounds |
 | `Escape` | During a drag | Cancel with no mutation |
 
+The `Dock` rows above are the default map over public operations —
+`CycleMostRecentlyUsed`, `CyclePanes`, `StepTab`, `Traverse` and
+`OpenPaneMenu`. A host with its own shortcut system binds those and sets
+`HandlesKeys="False"`, which stops the `Dock` reading keys at all. `Escape`
+during a drag stays the `Dock`'s regardless: it cancels a gesture rather than
+performing an action.
+
 ## Walkthrough
 
 ### 1. Reach the dock and move between panes

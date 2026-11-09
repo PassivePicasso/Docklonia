@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.VisualTree;
 using Docklonia.Model;
 
 namespace Docklonia.Controls;
@@ -21,6 +22,9 @@ namespace Docklonia.Controls;
 ///
 /// <para>Because the ratio is clamped so neither side can reach the floor, a
 /// pane can never be dragged out of existence and left unrecoverable.</para>
+///
+/// <para>A side with nothing to show is hidden, and the other takes the whole
+/// extent with no splitter between (§8).</para>
 /// </remarks>
 public class DockSplitPresenter : Control
 {
@@ -44,6 +48,9 @@ public class DockSplitPresenter : Control
         _splitter.DragTo += OnSplitterDragTo;
         _splitter.DragCompleted += OnSplitterDragCompleted;
         _splitter.StepRequested += OnSplitterStep;
+
+        _first.PropertyChanged += OnSideChanged;
+        _second.PropertyChanged += OnSideChanged;
     }
 
     public DockSplitPane? Split
@@ -100,6 +107,11 @@ public class DockSplitPresenter : Control
     /// </summary>
     private (double First, double Second) Divide(double extent)
     {
+        if (!_first.IsVisible || !_second.IsVisible)
+        {
+            return _first.IsVisible ? (Math.Max(extent, 0), 0) : (0, Math.Max(extent, 0));
+        }
+
         var min = MinPaneSize;
         var ratio = Split?.Ratio ?? 0.5;
 
@@ -118,7 +130,18 @@ public class DockSplitPresenter : Control
     }
 
     private double Thickness(Size size)
-        => IsHorizontal ? _splitter.DesiredSize.Width : _splitter.DesiredSize.Height;
+        => !_splitter.IsVisible ? 0 : IsHorizontal ? _splitter.DesiredSize.Width : _splitter.DesiredSize.Height;
+
+    private void OnSideChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property != IsVisibleProperty)
+        {
+            return;
+        }
+
+        _splitter.IsVisible = _first.IsVisible && _second.IsVisible;
+        InvalidateMeasure();
+    }
 
     private double Extent(Size size) => IsHorizontal ? size.Width : size.Height;
 
@@ -126,16 +149,45 @@ public class DockSplitPresenter : Control
         ? new Size(extent, available.Height)
         : new Size(available.Width, extent);
 
-    private void OnSplitChanged(AvaloniaPropertyChangedEventArgs e)
+    /// <remarks>
+    /// The split is followed only while this is in the visual tree, so a split
+    /// does not keep a presenter discarded around it.
+    /// </remarks>
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (e.OldValue is DockSplitPane previous)
+        base.OnAttachedToVisualTree(e);
+
+        if (Split is { } split)
         {
-            previous.PropertyChanged -= OnSplitPropertyChanged;
+            split.PropertyChanged += OnSplitPropertyChanged;
         }
 
-        if (e.NewValue is DockSplitPane current)
+        Sync();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+
+        if (Split is { } split)
         {
-            current.PropertyChanged += OnSplitPropertyChanged;
+            split.PropertyChanged -= OnSplitPropertyChanged;
+        }
+    }
+
+    private void OnSplitChanged(AvaloniaPropertyChangedEventArgs e)
+    {
+        if (this.IsAttachedToVisualTree())
+        {
+            if (e.OldValue is DockSplitPane previous)
+            {
+                previous.PropertyChanged -= OnSplitPropertyChanged;
+            }
+
+            if (e.NewValue is DockSplitPane current)
+            {
+                current.PropertyChanged += OnSplitPropertyChanged;
+            }
         }
 
         Sync();

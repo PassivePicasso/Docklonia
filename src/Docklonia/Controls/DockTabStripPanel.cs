@@ -55,6 +55,8 @@ public class DockTabStripPanel : Panel
     private const string FirstInLine = ":first-in-line";
     private const string LastInLine = ":last-in-line";
 
+    /// <summary>The lines the last measure chose, as counts of visible tabs in order.</summary>
+    /// <remarks>Counts, not tabs: a strip not measured again keeps no tab it lost.</remarks>
     private readonly List<LineMetrics> _lines = new();
 
     static DockTabStripPanel()
@@ -108,6 +110,8 @@ public class DockTabStripPanel : Panel
 
         var scale = UseLayoutRounding ? LayoutHelper.GetLayoutScale(this) : 0d;
 
+        var next = 0;
+
         foreach (var line in _lines)
         {
             var share = (finalSize.Width - line.RequiredWidth) / line.Count;
@@ -116,7 +120,7 @@ public class DockTabStripPanel : Panel
 
             for (var i = 0; i < line.Count; i++)
             {
-                var tab = line.Tabs[i];
+                var tab = NextVisible(ref next);
 
                 edge += Math.Max(MinTabWidth, tab.DesiredSize.Width + share);
 
@@ -135,6 +139,21 @@ public class DockTabStripPanel : Panel
         }
 
         return new Size(finalSize.Width, Math.Max(y, finalSize.Height));
+    }
+
+    /// <summary>The next visible child from <paramref name="index"/> on, in the order measure took them.</summary>
+    /// <remarks>
+    /// A child added, removed or shown since the last measure invalidated it,
+    /// so arrange walks the same visible children that measure counted.
+    /// </remarks>
+    private Control NextVisible(ref int index)
+    {
+        while (!Children[index].IsVisible)
+        {
+            index++;
+        }
+
+        return Children[index++];
     }
 
     /// <summary>
@@ -194,23 +213,18 @@ public class DockTabStripPanel : Panel
                 continue;
             }
 
-            var members = new Control[count];
             var height = 0d;
             var required = 0d;
 
             for (var i = 0; i < count; i++, index++)
             {
-                members[i] = tabs[index];
                 height = Math.Max(height, tabs[index].DesiredSize.Height);
                 required += tabs[index].DesiredSize.Width;
             }
 
-            _lines.Add(new LineMetrics(members, height, required));
+            _lines.Add(new LineMetrics(count, height, required));
         }
     }
 
-    private readonly record struct LineMetrics(Control[] Tabs, double Height, double RequiredWidth)
-    {
-        public int Count => Tabs.Length;
-    }
+    private readonly record struct LineMetrics(int Count, double Height, double RequiredWidth);
 }

@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:theme="using:Unleash.Theme">
 
   <!--
     The default theme is one merged dictionary (§12), included once:
@@ -30,6 +31,9 @@
   <Styles.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
+        <!-- The tokens, for a host that never merged its own; one merged in
+             the application's resources, as ThemeTokens.Apply does, wins. -->
+        <theme:ThemeTokens />
         <ResourceInclude Source="avares://Docklonia/Themes/Resources.axaml" />
         <ResourceInclude Source="avares://Docklonia/Themes/DockControls.axaml" />
       </ResourceDictionary.MergedDictionaries>
@@ -40,7 +44,7 @@
   <Style Selector="Border.dock-drop-preview">
     <Setter Property="Background" Value="{DynamicResource DockDropPreviewBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DockDropPreviewBorderBrush}" />
-    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderThickness" Value="{DynamicResource DockDropPreviewBorderThickness}" />
   </Style>
 
 </Styles>

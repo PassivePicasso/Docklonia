@@ -15,7 +15,8 @@ namespace Docklonia.Controls;
 /// owner's model and owns no model of its own. Descriptors, the acceptance
 /// filter, and the single layout document therefore all extend to floats for
 /// free — floating can never strand content in a surface that cannot describe
-/// it.
+/// it. A float holding only placeholders has no window until one is claimed
+/// (§8).
 /// </remarks>
 internal sealed class DockFloatSurfaces : IDisposable
 {
@@ -52,7 +53,9 @@ internal sealed class DockFloatSurfaces : IDisposable
 
     internal void Sync()
     {
-        var wanted = _layout?.Floats.ToArray() ?? Array.Empty<FloatPane>();
+        // Synced on every layout write-back, which is where a placeholder is
+        // claimed, so a float waiting for its item opens its window then.
+        var wanted = _layout?.Floats.Where(DockTree.Shows).ToArray() ?? Array.Empty<FloatPane>();
 
         foreach (var stale in _hosts.Keys.Except(wanted).ToArray())
         {
@@ -102,9 +105,17 @@ internal sealed class DockFloatSurfaces : IDisposable
         }
     }
 
+    /// <summary>
+    /// The window was closed by its user: the float leaves the layout. A host
+    /// released here first is not that.
+    /// </summary>
     private void OnHostClosed(FloatPane pane)
     {
-        _hosts.Remove(pane);
+        if (!_hosts.Remove(pane))
+        {
+            return;
+        }
+
         pane.PropertyChanged -= OnPanePropertyChanged;
         Unwatch(pane);
         _layout?.Floats.Remove(pane);

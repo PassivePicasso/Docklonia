@@ -53,7 +53,9 @@ internal sealed class DockItemCoordinator : IDisposable
 
     /// <summary>
     /// Reconciles the tree against the current items. Placement is consulted only
-    /// for items with no node — once a node exists, the layout wins (§3.9).
+    /// for items with no node — once a node exists, the layout wins (§3.9). A
+    /// loaded node whose item has not arrived stays as a hidden placeholder, and
+    /// the item claims it when it does (§8).
     /// </summary>
     internal void Resync()
     {
@@ -62,7 +64,6 @@ internal sealed class DockItemCoordinator : IDisposable
         var live = Items().Concat(AuthoredItems()).ToArray();
 
         AdoptNodesFromLoadedLayout(layout, live);
-        DropUnmatchedNodes(layout);
 
         descriptors.ValidateKeys(live
             .Select(item => new KeyValuePair<object, string?>(item, KeyOf(item)))
@@ -101,22 +102,7 @@ internal sealed class DockItemCoordinator : IDisposable
     {
         foreach (var content in DockTree.ContentsIn(node).ToArray())
         {
-            if (!_metadata.Remove(content, out var metadata))
-            {
-                continue;
-            }
-
-            if (metadata.Item is { } item && _nodesByItem.TryGetValue(item, out var nodes))
-            {
-                nodes.Remove(content);
-
-                if (nodes.Count == 0)
-                {
-                    _nodesByItem.Remove(item);
-                }
-            }
-
-            metadata.Dispose();
+            Forget(content);
         }
     }
 
@@ -242,30 +228,61 @@ internal sealed class DockItemCoordinator : IDisposable
     }
 
     /// <summary>
-    /// A serialized key with no matching item yields a <b>dropped</b> node, never
-    /// a fabricated one (§8). An empty tab would be a node the user cannot reason
-    /// about; dropping it runs the same normalization every other removal does.
+    /// Forgets the nodes a replaced layout took with it.
     /// </summary>
     /// <remarks>
-    /// Only nodes still awaiting content are dropped — those are the ones a
-    /// layout document produced and load-time matching could not satisfy. A node
-    /// already holding live content that simply is not in <b>this</b> collection
-    /// arrived by drag from another <c>Dock</c> (§7), and content keys are
-    /// <c>Dock</c>-scoped, so its absence here says nothing about it. Dropping it
-    /// would delete a pane the user just moved.
+    /// Only when the layout itself is swapped, and only for what the old one
+    /// held: those nodes are in no tree afterwards, and kept they answer that
+    /// an item is already placed when it is nowhere -- so it is never placed
+    /// again and a reset comes back empty. Narrow on purpose. Doing this on
+    /// every resync would forget a node the layout holds and this walk missed,
+    /// and the item would then be placed a second time beside the tab it
+    /// already has.
+    ///
+    /// No close is signalled, for the reason <see cref="Release"/> gives: the
+    /// item did not close, its view went away.
     /// </remarks>
-    private void DropUnmatchedNodes(DockLayout layout)
+    internal void LayoutReplaced(DockLayout? previous, DockLayout? current)
     {
-        foreach (var node in layout.AllPanes().OfType<DockContent>().ToArray())
+        if (previous is null || ReferenceEquals(previous, current))
         {
-            if (node.Content is not null)
+            return;
+        }
+
+        var kept = current is null
+            ? new HashSet<DockContent>()
+            : new HashSet<DockContent>(current.AllPanes().OfType<DockContent>());
+
+        foreach (var content in previous.AllPanes().OfType<DockContent>())
+        {
+            if (kept.Contains(content))
             {
                 continue;
             }
 
-            Detach(node);
-            DockMutator.Remove(layout, node);
+            Forget(content);
         }
+    }
+
+    /// <summary>Stops tracking one node, saying nothing about closing.</summary>
+    private void Forget(DockContent content)
+    {
+        if (!_metadata.Remove(content, out var metadata))
+        {
+            return;
+        }
+
+        if (metadata.Item is { } item && _nodesByItem.TryGetValue(item, out var nodes))
+        {
+            nodes.Remove(content);
+
+            if (nodes.Count == 0)
+            {
+                _nodesByItem.Remove(item);
+            }
+        }
+
+        metadata.Dispose();
     }
 
     /// <summary>Creates a node for an item that has none, and places it (§3.9).</summary>

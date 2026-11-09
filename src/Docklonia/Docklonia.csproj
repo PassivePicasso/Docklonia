@@ -9,7 +9,7 @@
 
   <PropertyGroup>
     <PackageId>Docklonia</PackageId>
-    <Version>0.3.9</Version>
+    <Version>0.3.17</Version>
     <PackageOutputPath>F:\Projects\Godot\NuGetFeed</PackageOutputPath>
     <Description>A docking-layout library for Avalonia: split panes, tabbed groups, floating windows, drag-and-drop re-docking, and a JSON-serializable layout.</Description>
     <Authors>James LaPenn</Authors>
@@ -26,6 +26,10 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Unleash.Theme" Version="0.6.0-step1.1" />
+
+    <!-- The UI rules, as build errors: StandaloneUnleash Documentation/UiRules.md. -->
+    <PackageReference Include="Unleash.UiRules" Version="0.1.0" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

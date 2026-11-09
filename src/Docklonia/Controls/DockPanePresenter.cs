@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.VisualTree;
 using Docklonia.Model;
 
 namespace Docklonia.Controls;
@@ -14,7 +15,9 @@ namespace Docklonia.Controls;
 /// becomes control shape. Each <c>Dock</c> independently builds presenters for
 /// whatever nodes it now owns and discards them when the tree changes — which is
 /// why moving a node between trees, including across windows, needs no visual
-/// reparenting.
+/// reparenting. A node with nothing to show is presented hidden (§8). It
+/// follows its node only while in the visual tree, so a node does not keep the
+/// presenters discarded around it.
 /// </remarks>
 public class DockPanePresenter : Decorator
 {
@@ -34,20 +37,57 @@ public class DockPanePresenter : Decorator
 
     internal Dock? Owner { get; set; }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        Follow(Pane as DockPane);
+        UpdateShown();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+
+        Unfollow(Pane as DockPane);
+    }
+
     private void OnPaneChanged(Avalonia.AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.OldValue is INotifyPropertyChanged previous)
+        if (this.IsAttachedToVisualTree())
         {
-            previous.PropertyChanged -= OnNodePropertyChanged;
-        }
-
-        if (e.NewValue is INotifyPropertyChanged current)
-        {
-            current.PropertyChanged += OnNodePropertyChanged;
+            Unfollow(e.OldValue as DockPane);
+            Follow(e.NewValue as DockPane);
         }
 
         Rebuild();
     }
+
+    private void Follow(DockPane? pane)
+    {
+        if (pane is null)
+        {
+            return;
+        }
+
+        pane.PropertyChanged += OnNodePropertyChanged;
+        pane.StructureChanged += OnStructureChanged;
+    }
+
+    private void Unfollow(DockPane? pane)
+    {
+        if (pane is null)
+        {
+            return;
+        }
+
+        pane.PropertyChanged -= OnNodePropertyChanged;
+        pane.StructureChanged -= OnStructureChanged;
+    }
+
+    private void OnStructureChanged(object? sender, EventArgs e) => UpdateShown();
+
+    private void UpdateShown() => IsVisible = Pane is null || DockTree.Shows(Pane);
 
     private void OnNodePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -68,6 +108,6 @@ public class DockPanePresenter : Decorator
             var node => new DockPaneControl { Owner = Owner, Node = node },
         };
 
-        Owner?.RegisterRealizedView(this);
+        UpdateShown();
     }
 }

@@ -119,6 +119,7 @@ public sealed class DockSplitPane : DockPane, IDockNode
         Adopt(value);
         Raise(name);
         Raise(nameof(Children));
+        RaiseStructureChanged();
     }
 
     private static double ClampRatio(double value)

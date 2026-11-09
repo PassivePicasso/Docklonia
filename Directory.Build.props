@@ -16,4 +16,9 @@
     <PackageReference Include="Unleash.Threading.Check" Version="0.1.0-step1.1" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- Every test held to the bytes it allocated when last measured. -->
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <PackageReference Include="Unleash.Allowance" Version="0.1.5" />
+  </ItemGroup>
+
 </Project>
