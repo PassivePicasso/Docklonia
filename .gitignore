@@ -41,3 +41,6 @@ desktop.ini
 # Local tooling
 *.swp
 *~
+
+# Agent worktrees, each a checkout of its own
+.claude/worktrees/
