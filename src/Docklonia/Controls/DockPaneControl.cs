@@ -70,6 +70,11 @@ public class DockPaneControl : TemplatedControl
         FocusableProperty.OverrideDefaultValue<DockPaneControl>(true);
     }
 
+    public DockPaneControl()
+    {
+        AddHandler(PointerPressedEvent, OnPressedWithin, RoutingStrategies.Bubble, handledEventsToo: true);
+    }
+
     public IDockNode? Node
     {
         get => GetValue(NodeProperty);
@@ -127,14 +132,40 @@ public class DockPaneControl : TemplatedControl
         Rebuild();
     }
 
-    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    /// <summary>
+    /// A press anywhere in the pane activates it (§3.11), whether or not the
+    /// content took the press for a gesture of its own.
+    /// </summary>
+    private void OnPressedWithin(object? sender, PointerPressedEventArgs e)
     {
-        base.OnPointerPressed(e);
+        var pressed = SelectedNode ?? Node;
 
-        if (Node is not null && !e.Handled)
+        if (pressed is null || Owner is null)
         {
-            Owner?.ActivateNode(SelectedNode ?? Node);
+            return;
         }
+
+        // Active already, and no focus elsewhere in the dock to bring here.
+        if (HoldsActive(pressed) && (IsKeyboardFocusWithin || !Owner.IsKeyboardFocusWithin))
+        {
+            return;
+        }
+
+        Owner.ActivateNode(pressed);
+    }
+
+    /// <summary>Whether the dock's active pane is this node or one inside it.</summary>
+    private bool HoldsActive(IDockPane pressed)
+    {
+        for (var pane = Owner?.Layout?.ActivePane; pane is not null; pane = pane.Parent)
+        {
+            if (ReferenceEquals(pane, pressed))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Rebuilds the tab controls and the content host from the model.</summary>
